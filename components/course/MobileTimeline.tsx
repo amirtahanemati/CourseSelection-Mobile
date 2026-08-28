@@ -3,8 +3,8 @@ import { ScrollView, TouchableOpacity, View } from "react-native";
 import { useCourseStore } from "../../store/useCourseStore";
 import { Course } from "../../types";
 import { colorFor, parseTimeToMinutes } from "../../utils/helpers";
-import Text from "../ui/CustomText"; // 👈 فونت سفارشی
-// import BottomSheet from "../ui/BottomSheet";
+import BottomSheet from "../ui/BottomSheet";
+import Text from "../ui/CustomText";
 
 export const DAYS = [
   "شنبه",
@@ -91,9 +91,6 @@ export default function MobileTimeline() {
             const glassBg = baseColor
               .replace("hsl", "hsla")
               .replace(")", isDark ? ", 0.12)" : ", 0.08)");
-            const borderColor = baseColor
-              .replace("hsl", "hsla")
-              .replace(")", isDark ? ", 0.3)" : ", 0.2)");
 
             return (
               <TouchableOpacity
@@ -158,6 +155,10 @@ export default function MobileTimeline() {
           })
         )}
       </View>
+      <BottomSheet
+        course={selectedCourse}
+        onClose={() => setSelectedCourse(null)}
+      />
     </View>
   );
 }
