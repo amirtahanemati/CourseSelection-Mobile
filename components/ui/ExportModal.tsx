@@ -1,14 +1,16 @@
 import * as DocumentPicker from "expo-document-picker";
-import * as FileSystem from "expo-file-system/legacy";
+import * as FileSystem from "expo-file-system";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import {
   FileJson,
   FileText,
   Image as ImageIcon,
+  Share2,
   UploadCloud,
   X,
 } from "lucide-react-native";
+import { compressToEncodedURIComponent } from "lz-string";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
@@ -16,13 +18,13 @@ import {
   Modal,
   PanResponder,
   Platform,
+  Share,
   StyleSheet,
   TouchableOpacity,
   View,
 } from "react-native";
 import Toast from "react-native-toast-message";
 import { useCourseStore } from "../../store/useCourseStore";
-import { buildExportFilename } from "../../utils/helpers";
 import Text from "./CustomText";
 
 const { height } = Dimensions.get("window");
@@ -122,7 +124,36 @@ export default function ExportModal({
     }, 150);
   };
 
-  // 👈 منطق بازنویسی شده: نوشتن مستقیم دیتای متنی در فایل (بدون هیچ تبدیلی)
+  const handleShareLink = () => {
+    if (courses.length === 0) {
+      Toast.show({
+        type: "error",
+        text1: "برنامه‌ای برای اشتراک‌گذاری وجود ندارد.",
+      });
+      return;
+    }
+
+    executeWithDelay(async () => {
+      try {
+        const compressedData = compressToEncodedURIComponent(
+          JSON.stringify(courses),
+        );
+        const shareUrl = `https://course-selection-rho.vercel.app/?schedule=${compressedData}`;
+
+        await Share.share({
+          message: `بیا برنامه‌ی هفتگی من رو ببین! 👇\n\n${shareUrl}`,
+          title: "اشتراک‌گذاری برنامه هفتگی",
+        });
+
+        onClose();
+      } catch (error) {
+        Toast.show({ type: "error", text1: "خطا در اشتراک‌گذاری." });
+      } finally {
+        setIsProcessing(false);
+      }
+    });
+  };
+
   const handleExportJSON = () => {
     executeWithDelay(async () => {
       try {
@@ -136,11 +167,10 @@ export default function ExportModal({
             if (permissions.granted) {
               const fileUri = await FS.StorageAccessFramework.createFileAsync(
                 permissions.directoryUri,
-                buildExportFilename("course-backup", "json"),
+                `daneshjob_backup_${Date.now()}.json`,
                 "application/json",
               );
 
-              // فایل متنی JSON مستقیماً با انکودینگ utf8 ذخیره می‌شود
               await FS.writeAsStringAsync(fileUri, jsonString, {
                 encoding: FS.EncodingType.UTF8,
               });
@@ -152,15 +182,12 @@ export default function ExportModal({
               onClose();
               return;
             } else {
-              return; // لغو توسط کاربر
+              return;
             }
-          } catch (safError) {
-            // در صورت بروز خطای سیستمی به Fallback (اشتراک‌گذاری) سوییچ می‌کند
-          }
+          } catch (safError) {}
         }
 
-        // جایگزین امن برای iOS و خطاهای احتمالی فایل‌منیجر اندروید
-        const tempUri = `${FS.documentDirectory}${buildExportFilename("course-backup", "json")}`;
+        const tempUri = `${FS.documentDirectory}daneshjob_backup_${Date.now()}.json`;
         await FS.writeAsStringAsync(tempUri, jsonString, {
           encoding: FS.EncodingType.UTF8,
         });
@@ -180,7 +207,6 @@ export default function ExportModal({
     });
   };
 
-  // 👈 اعتبارسنجی ارتقا یافته و سازگار با فرمت ارسال شده
   const handleImportJSON = () => {
     executeWithDelay(async () => {
       try {
@@ -194,7 +220,6 @@ export default function ExportModal({
           return;
         }
 
-        // سازگاری با نسخه‌های مختلف Expo (گرفتن uri)
         const asset = result.assets ? result.assets[0] : (result as any);
         if (!asset || !asset.uri) throw new Error("Invalid URI");
 
@@ -203,19 +228,16 @@ export default function ExportModal({
 
         let fileContent = "";
         try {
-          // تلاش اولیه با فایل‌سیستم بومی
           fileContent = await FS.readAsStringAsync(uri, {
             encoding: FS.EncodingType.UTF8,
           });
         } catch (fsError) {
-          // استفاده از Fetch برای دور زدن محدودیت‌های Content Providers در اندروید
           const response = await fetch(uri);
           fileContent = await response.text();
         }
 
         const parsedData = JSON.parse(fileContent);
 
-        // اعتبارسنجی دقیق آرایه دروس و سشن‌ها
         const isValid =
           Array.isArray(parsedData) &&
           parsedData.every(
@@ -367,10 +389,9 @@ export default function ExportModal({
             if (permissions.granted) {
               const pdfUri = await FS.StorageAccessFramework.createFileAsync(
                 permissions.directoryUri,
-                buildExportFilename("weekly-schedule", "pdf"),
+                `schedule_${Date.now()}.pdf`,
                 "application/pdf",
               );
-              // در PDF چون فایل باینری است از Base64 استفاده می‌کنیم تا کرش نکند
               const base64Data = await FS.readAsStringAsync(uri, {
                 encoding: FS.EncodingType.Base64,
               });
@@ -386,9 +407,7 @@ export default function ExportModal({
             } else {
               return;
             }
-          } catch (safError) {
-            // Fallback
-          }
+          } catch (safError) {}
         }
 
         if (await Sharing.isAvailableAsync()) {
@@ -413,7 +432,6 @@ export default function ExportModal({
         await onExportImage();
         onClose();
       } catch (error) {
-        // باز ماندن مودال در صورت انصراف کاربر
       } finally {
         setIsProcessing(false);
       }
@@ -456,37 +474,59 @@ export default function ExportModal({
               width: "100%",
               alignItems: "center",
             }}
-            className="pb-6"
+            className="pb-4"
           >
             <View
-              className="w-16 h-1.5 rounded-full mb-6 mt-1"
+              className="w-16 h-1.5 rounded-full mb-4 mt-1"
               style={{ backgroundColor: isDark ? "#2a2d35" : "#e5e7eb" }}
             />
             <Text
-              className={`text-xl font-extrabold ${isDark ? "text-white" : "text-gray-900"}`}
+              className={`text-[19px] font-extrabold ${isDark ? "text-white" : "text-gray-900"}`}
               style={{ writingDirection: "rtl", letterSpacing: 0 }}
             >
               مدیریت خروجی‌ها
             </Text>
           </View>
 
-          <View className="flex-col gap-3 mb-6">
+          <View className="flex-col gap-2.5 mb-6">
+            <TouchableOpacity
+              onPress={handleShareLink}
+              disabled={isProcessing}
+              className={`flex-row-reverse items-center py-1.5 px-4 gap-3 pb-4 rounded-2xl border ${isDark ? "bg-[#1a1c23] border-[#272a35]" : "bg-gray-50 border-gray-200"}`}
+            >
+              <View className="w-11 h-11 rounded-full items-center justify-center bg-purple-500/10 shrink-0">
+                <Share2 size={22} color="#a855f7" />
+              </View>
+              <View className="flex-1 justify-center">
+                <Text
+                  className={`text-[15px] font-bold text-right mb-0.5 ${isDark ? "text-gray-200" : "text-gray-800"}`}
+                >
+                  اشتراک‌گذاری برنامه
+                </Text>
+                <Text
+                  className={`text-[11px] text-right ${isDark ? "text-gray-500" : "text-gray-500"}`}
+                >
+                  ارسال مستقیم به دوستان از طریق لینک
+                </Text>
+              </View>
+            </TouchableOpacity>
+
             <TouchableOpacity
               onPress={handleExportPDF}
               disabled={isProcessing}
-              className={`flex-row-reverse items-center p-4 rounded-2xl border ${isDark ? "bg-[#1a1c23] border-[#272a35]" : "bg-gray-50 border-gray-200"}`}
+              className={`flex-row-reverse items-center py-1.5 px-4 gap-3 pb-4 rounded-2xl border ${isDark ? "bg-[#1a1c23] border-[#272a35]" : "bg-gray-50 border-gray-200"}`}
             >
-              <View className="w-12 h-12 rounded-full items-center justify-center bg-red-500/10 mr-4">
-                <FileText size={24} color="#ef4444" />
+              <View className="w-11 h-11 rounded-full items-center justify-center bg-red-500/10 shrink-0">
+                <FileText size={22} color="#ef4444" />
               </View>
-              <View className="flex-1">
+              <View className="flex-1 justify-center">
                 <Text
-                  className={`text-base font-bold text-right mb-1 ${isDark ? "text-gray-200" : "text-gray-800"}`}
+                  className={`text-[15px] font-bold text-right mb-0.5 ${isDark ? "text-gray-200" : "text-gray-800"}`}
                 >
                   خروجی PDF
                 </Text>
                 <Text
-                  className={`text-xs text-right ${isDark ? "text-gray-500" : "text-gray-500"}`}
+                  className={`text-[11px] text-right ${isDark ? "text-gray-500" : "text-gray-500"}`}
                 >
                   ذخیره برنامه هفتگی به صورت فایل PDF
                 </Text>
@@ -496,19 +536,19 @@ export default function ExportModal({
             <TouchableOpacity
               onPress={handleExportPNG}
               disabled={isProcessing}
-              className={`flex-row-reverse items-center p-4 rounded-2xl border ${isDark ? "bg-[#1a1c23] border-[#272a35]" : "bg-gray-50 border-gray-200"}`}
+              className={`flex-row-reverse items-center py-1.5 px-4 gap-3 pb-4 rounded-2xl border ${isDark ? "bg-[#1a1c23] border-[#272a35]" : "bg-gray-50 border-gray-200"}`}
             >
-              <View className="w-12 h-12 rounded-full items-center justify-center bg-blue-500/10 mr-4">
-                <ImageIcon size={24} color="#3b82f6" />
+              <View className="w-11 h-11 rounded-full items-center justify-center bg-blue-500/10 shrink-0">
+                <ImageIcon size={22} color="#3b82f6" />
               </View>
-              <View className="flex-1">
+              <View className="flex-1 justify-center">
                 <Text
-                  className={`text-base font-bold text-right mb-1 ${isDark ? "text-gray-200" : "text-gray-800"}`}
+                  className={`text-[15px] font-bold text-right mb-0.5 ${isDark ? "text-gray-200" : "text-gray-800"}`}
                 >
                   خروجی تصویر (PNG)
                 </Text>
                 <Text
-                  className={`text-xs text-right ${isDark ? "text-gray-500" : "text-gray-500"}`}
+                  className={`text-[11px] text-right ${isDark ? "text-gray-500" : "text-gray-500"}`}
                 >
                   ذخیره گرافیکی برنامه به صورت عکس
                 </Text>
@@ -518,19 +558,19 @@ export default function ExportModal({
             <TouchableOpacity
               onPress={handleExportJSON}
               disabled={isProcessing}
-              className={`flex-row-reverse items-center p-4 rounded-2xl border ${isDark ? "bg-[#1a1c23] border-[#272a35]" : "bg-gray-50 border-gray-200"}`}
+              className={`flex-row-reverse items-center py-1.5 px-4 gap-3 pb-4 rounded-2xl border ${isDark ? "bg-[#1a1c23] border-[#272a35]" : "bg-gray-50 border-gray-200"}`}
             >
-              <View className="w-12 h-12 rounded-full items-center justify-center bg-amber-500/10 mr-4">
-                <FileJson size={24} color="#f59e0b" />
+              <View className="w-11 h-11 rounded-full items-center justify-center bg-amber-500/10 shrink-0">
+                <FileJson size={22} color="#f59e0b" />
               </View>
-              <View className="flex-1">
+              <View className="flex-1 justify-center">
                 <Text
-                  className={`text-base font-bold text-right mb-1 ${isDark ? "text-gray-200" : "text-gray-800"}`}
+                  className={`text-[15px] font-bold text-right mb-0.5 ${isDark ? "text-gray-200" : "text-gray-800"}`}
                 >
                   تهیه نسخه پشتیبان
                 </Text>
                 <Text
-                  className={`text-xs text-right ${isDark ? "text-gray-500" : "text-gray-500"}`}
+                  className={`text-[11px] text-right ${isDark ? "text-gray-500" : "text-gray-500"}`}
                 >
                   ذخیره اطلاعات دروس با فرمت JSON
                 </Text>
@@ -540,19 +580,19 @@ export default function ExportModal({
             <TouchableOpacity
               onPress={handleImportJSON}
               disabled={isProcessing}
-              className={`flex-row-reverse items-center p-4 rounded-2xl border ${isDark ? "bg-[#1a1c23] border-[#272a35]" : "bg-gray-50 border-gray-200"}`}
+              className={`flex-row-reverse items-center py-1.5 px-4 gap-3 pb-4 rounded-2xl border ${isDark ? "bg-[#1a1c23] border-[#272a35]" : "bg-gray-50 border-gray-200"}`}
             >
-              <View className="w-12 h-12 rounded-full items-center justify-center bg-emerald-500/10 mr-4">
-                <UploadCloud size={24} color="#10b981" />
+              <View className="w-11 h-11 rounded-full items-center justify-center bg-emerald-500/10 shrink-0">
+                <UploadCloud size={22} color="#10b981" />
               </View>
-              <View className="flex-1">
+              <View className="flex-1 justify-center">
                 <Text
-                  className={`text-base font-bold text-right mb-1 ${isDark ? "text-gray-200" : "text-gray-800"}`}
+                  className={`text-[15px] font-bold text-right mb-0.5 ${isDark ? "text-gray-200" : "text-gray-800"}`}
                 >
                   بازیابی اطلاعات
                 </Text>
                 <Text
-                  className={`text-xs text-right ${isDark ? "text-gray-500" : "text-gray-500"}`}
+                  className={`text-[11px] text-right ${isDark ? "text-gray-500" : "text-gray-500"}`}
                 >
                   بارگذاری فایل پشتیبان و بازیابی دروس
                 </Text>
