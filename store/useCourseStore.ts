@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Appearance } from "react-native";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { Course } from "../types/index";
@@ -16,12 +17,14 @@ interface CourseState {
   importCourses: (courses: Course[]) => void;
 }
 
+const systemTheme = Appearance.getColorScheme() || "light";
+
 export const useCourseStore = create<CourseState>()(
   persist(
     (set) => ({
       courses: [],
       selectedCourseId: null,
-      theme: "dark",
+      theme: systemTheme as "dark" | "light",
 
       addCourse: (course) =>
         set((state) => ({ courses: [...state.courses, course] })),

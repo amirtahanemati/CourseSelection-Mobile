@@ -1,6 +1,8 @@
+import * as NavigationBar from "expo-navigation-bar";
 import { StatusBar } from "expo-status-bar";
-import React from "react";
-import { ScrollView, View } from "react-native";
+import * as SystemUI from "expo-system-ui";
+import React, { useEffect } from "react";
+import { Platform, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MobileTimeline from "../components/course/MobileTimeline";
 import CourseForm from "../components/form/CourseForm";
@@ -16,12 +18,19 @@ export default function Home() {
 
   const bgColor = isDark ? "#090a0f" : "#f5f7fa";
 
+  useEffect(() => {
+    if (Platform.OS === "android") {
+      SystemUI.setBackgroundColorAsync(bgColor);
+      NavigationBar.setButtonStyleAsync(isDark ? "light" : "dark");
+    }
+  }, [isDark, bgColor]);
+
   return (
     <View style={{ flex: 1, backgroundColor: bgColor }}>
       <StatusBar style={isDark ? "light" : "dark"} />
       <WelcomeModal />
 
-      {/* ۱. لایه ماسک (Mask Layer): */}
+      {/* ۱. لایه ماسک */}
       <View
         style={{
           position: "absolute",
@@ -34,7 +43,7 @@ export default function Home() {
         }}
       />
 
-      {/* ۲. تاپ‌بار شناور (Floating Topbar) */}
+      {/* ۲. تاپ‌بار شناور */}
       <View
         className="absolute left-0 right-0 z-50 px-4"
         style={{ top: insets.top + 12 }}
