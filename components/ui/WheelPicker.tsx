@@ -14,7 +14,7 @@ interface Props {
   onValueChange: (value: string) => void;
 }
 
-const ITEM_HEIGHT = 44;
+const ITEM_HEIGHT = 54;
 
 export default function WheelPicker({
   items,
@@ -32,7 +32,7 @@ export default function WheelPicker({
           y: index * ITEM_HEIGHT,
           animated: false,
         });
-      }, 50);
+      }, 100);
     }
   }, [selectedValue, items]);
 
@@ -44,33 +44,66 @@ export default function WheelPicker({
   };
 
   return (
-    <View className="flex-1 h-[220px] relative justify-center">
+    <View style={{ height: ITEM_HEIGHT * 3, width: "100%" }}>
+      {/* 
+          👇 باکس آبی با تغییر به -6 کمی بالاتر رفت 
+          تا خطای بصری (Visual Offset) فونت فارسی را جبران کند 
+      */}
       <View
-        className={`absolute top-[88px] left-2 right-2 h-[44px] rounded-xl border ${isDark ? "bg-blue-500/10 border-blue-500/30" : "bg-blue-50 border-blue-200"} pointer-events-none z-0`}
+        style={{
+          position: "absolute",
+          top: ITEM_HEIGHT - 6,
+          left: 8,
+          right: 8,
+          height: ITEM_HEIGHT,
+          borderRadius: 16,
+          backgroundColor: isDark ? "rgba(59, 130, 246, 0.1)" : "#eff6ff",
+          zIndex: 0,
+        }}
+        pointerEvents="none"
       />
+
       <ScrollView
         ref={scrollViewRef}
         showsVerticalScrollIndicator={false}
         snapToInterval={ITEM_HEIGHT}
         decelerationRate="fast"
         onMomentumScrollEnd={handleScrollEnd}
-        className="z-10"
+        style={{ height: ITEM_HEIGHT * 3, width: "100%", zIndex: 10 }}
       >
-        <View style={{ height: 88 }} />
-        {items.map((item) => (
-          <View
-            key={item}
-            style={{ height: ITEM_HEIGHT }}
-            className="justify-center items-center"
-          >
-            <Text
-              className={`font-mono text-xl ${item === selectedValue ? "font-extrabold text-blue-500 scale-110" : isDark ? "text-gray-500" : "text-gray-400"}`}
+        <View style={{ height: ITEM_HEIGHT, width: "100%" }} />
+        {items.map((item) => {
+          const isSelected = item === selectedValue;
+          return (
+            <View
+              key={item}
+              style={{
+                height: ITEM_HEIGHT,
+                width: "100%",
+                justifyContent: "center",
+                alignItems: "center",
+              }}
             >
-              {item}
-            </Text>
-          </View>
-        ))}
-        <View style={{ height: 88 }} />
+              <Text
+                className={`font-mono text-2xl ${
+                  isSelected
+                    ? "font-extrabold text-blue-500"
+                    : isDark
+                      ? "text-gray-500"
+                      : "text-gray-400"
+                }`}
+                style={{
+                  textAlign: "center",
+                  textAlignVertical: "center",
+                  includeFontPadding: false,
+                }}
+              >
+                {item}
+              </Text>
+            </View>
+          );
+        })}
+        <View style={{ height: ITEM_HEIGHT, width: "100%" }} />
       </ScrollView>
     </View>
   );
