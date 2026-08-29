@@ -1,7 +1,7 @@
-import { StatusBar } from "expo-status-bar"; // 👈 مدیریت رنگ نوار بالای گوشی
+import { StatusBar } from "expo-status-bar";
 import React from "react";
 import { ScrollView, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context"; // 👈 محاسبه دقیق فاصله‌های گوشی
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MobileTimeline from "../components/course/MobileTimeline";
 import CourseForm from "../components/form/CourseForm";
 import Footer from "../components/layout/Footer";
@@ -14,34 +14,42 @@ export default function Home() {
   const insets = useSafeAreaInsets();
   const isDark = theme === "dark";
 
+  const bgColor = isDark ? "#090a0f" : "#f5f7fa";
+
   return (
-    <View
-      style={{
-        flex: 1,
-        backgroundColor: isDark ? "#090a0f" : "#f5f7fa",
-        paddingTop: insets.top, // جلوگیری از رفتن زیر دوربین/ساعت
-        paddingBottom: insets.bottom, // جلوگیری از رفتن زیر نوار ناوبری پایین
-      }}
-    >
-      {/* تغییر اتوماتیک رنگ آیکون‌های استاتوس‌بار (باتری، ساعت) */}
+    <View style={{ flex: 1, backgroundColor: bgColor }}>
       <StatusBar style={isDark ? "light" : "dark"} />
       <WelcomeModal />
 
-      {/* نوار ابزار با فاصله ایمن از بالا */}
+      {/* ۱. لایه ماسک (Mask Layer): */}
+      <View
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          height: insets.top + 35,
+          backgroundColor: bgColor,
+          zIndex: 40,
+        }}
+      />
+
+      {/* ۲. تاپ‌بار شناور (Floating Topbar) */}
       <View
         className="absolute left-0 right-0 z-50 px-4"
-        style={{ top: insets.top + 10 }}
+        style={{ top: insets.top + 12 }}
         pointerEvents="box-none"
       >
         <Topbar />
       </View>
 
+      {/* ۳. اسکرول‌ویو */}
       <ScrollView
         className="flex-1"
         contentContainerStyle={{
-          paddingTop: 80,
+          paddingTop: insets.top + 90,
           paddingHorizontal: 16,
-          paddingBottom: 32,
+          paddingBottom: 32 + insets.bottom,
         }}
         showsVerticalScrollIndicator={false}
       >
