@@ -9,14 +9,7 @@ import {
   X,
 } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
-import {
-  Animated,
-  Modal,
-  Pressable,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  View,
-} from "react-native";
+import { Animated, Pressable, TouchableOpacity, View } from "react-native";
 import Toast from "react-native-toast-message";
 import { useCourseStore } from "../../store/useCourseStore";
 import { Session } from "../../types";
@@ -28,8 +21,8 @@ import {
 import Text from "../ui/CustomText";
 import TextInput from "../ui/CustomTextInput";
 import DatePickerModal from "../ui/DatePickerModal";
+import DayPickerModal from "../ui/DayPickerModal";
 import TimePickerModal from "../ui/TimePickerModal";
-import WheelPicker from "../ui/WheelPicker";
 
 const DAYS = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه"];
 const initialSession: Session = { day: DAYS[0], start: "08:00", end: "10:00" };
@@ -273,7 +266,6 @@ export default function CourseForm() {
           >
             کد درس
           </Text>
-          {/* فونت mono برای اعداد انگلیسی حفظ شد */}
           <TextInput
             value={code}
             onChangeText={(t) => setCode(toEnglishDigits(t))}
@@ -289,7 +281,6 @@ export default function CourseForm() {
           >
             نام درس
           </Text>
-          {/* 👇 کلاس font-medium حذف شد تا فونت فارسی روی اندروید لود شود */}
           <TextInput
             value={name}
             onChangeText={setName}
@@ -304,7 +295,6 @@ export default function CourseForm() {
           >
             نام استاد
           </Text>
-          {/* 👇 کلاس font-medium حذف شد تا فونت فارسی روی اندروید لود شود */}
           <TextInput
             value={professor}
             onChangeText={setProfessor}
@@ -319,7 +309,6 @@ export default function CourseForm() {
           >
             تعداد واحد
           </Text>
-          {/* فونت mono برای اعداد انگلیسی حفظ شد */}
           <TextInput
             value={units}
             onChangeText={(t) => setUnits(toEnglishDigits(t))}
@@ -597,48 +586,15 @@ export default function CourseForm() {
         onClose={() => setIsDatePickerOpen(false)}
       />
 
-      <Modal
+      <DayPickerModal
         visible={dayPicker.visible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setDayPicker({ ...dayPicker, visible: false })}
-      >
-        <View className="flex-1 justify-center items-center bg-black/60 px-6">
-          <TouchableWithoutFeedback
-            onPress={() => setDayPicker({ ...dayPicker, visible: false })}
-          >
-            <View className="absolute inset-0" />
-          </TouchableWithoutFeedback>
-          <View
-            className={`w-full p-6 rounded-3xl ${isDark ? "bg-[#12141c] border border-[#1f222a]" : "bg-white"}`}
-          >
-            <Text
-              className={`text-lg font-bold text-center mb-6 ${isDark ? "text-white" : "text-gray-900"}`}
-            >
-              انتخاب روز کلاس
-            </Text>
-            <View
-              className={`flex-row-reverse items-center justify-center p-4 rounded-3xl border mb-6 ${isDark ? "bg-[#1a1c23] border-[#272a35]" : "bg-gray-50 border-gray-200"}`}
-            >
-              <WheelPicker
-                items={DAYS}
-                selectedValue={dayPicker.day}
-                onValueChange={(d) => setDayPicker({ ...dayPicker, day: d })}
-              />
-            </View>
-            <TouchableOpacity
-              onPress={() => {
-                updateSession(dayPicker.index, "day", dayPicker.day);
-                setDayPicker({ ...dayPicker, visible: false });
-              }}
-              className="bg-blue-500 py-3.5 rounded-xl flex-row-reverse items-center justify-center gap-2"
-            >
-              <Check size={18} color="white" />
-              <Text className="text-white font-bold">تأیید روز</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+        initialDay={dayPicker.day}
+        onConfirm={(day) => {
+          updateSession(dayPicker.index, "day", day);
+          setDayPicker({ ...dayPicker, visible: false });
+        }}
+        onClose={() => setDayPicker({ ...dayPicker, visible: false })}
+      />
     </View>
   );
 }
