@@ -17,7 +17,7 @@ Text.defaultProps.style = { fontFamily: "DanaFaNum" };
 // @ts-ignore
 if (TextInput.defaultProps == null) TextInput.defaultProps = {};
 // @ts-ignore
-TextInput.defaultProps.style = { fontFamily: "DanaFaNum" };
+TextInput.defaultProps.style = { fontFamily: "DanaFaNum-Regular" };
 
 SplashScreen.preventAutoHideAsync();
 

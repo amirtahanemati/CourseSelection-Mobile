@@ -70,7 +70,6 @@ export default function CourseForm() {
     day: string;
   }>({ visible: false, index: 0, day: DAYS[0] });
 
-  // استیت‌ها و رفرنس‌های انیمیشن
   const fillAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const [isAnimating, setIsAnimating] = useState(false);
@@ -133,11 +132,9 @@ export default function CourseForm() {
     return null;
   };
 
-  // 👈 متد اصلی کلیک: اول اعتبارسنجی، بعد اجرای انیمیشن، و در پایان ذخیره‌سازی
   const handlePress = () => {
-    if (isAnimating) return; // جلوگیری از کلیک مجدد هنگام انیمیشن
+    if (isAnimating) return;
 
-    // ۱. اعتبارسنجی فرم
     if (!name || !code)
       return Toast.show({ type: "error", text1: "نام و کد درس الزامی است." });
     for (let i = 0; i < sessions.length; i++) {
@@ -163,9 +160,7 @@ export default function CourseForm() {
 
     setIsAnimating(true);
 
-    // ۲. اجرای انیمیشن‌ها به صورت متوالی و موازی
     Animated.sequence([
-      // افکت فشرده شدن دکمه
       Animated.timing(scaleAnim, {
         toValue: 0.95,
         duration: 100,
@@ -176,14 +171,12 @@ export default function CourseForm() {
         duration: 100,
         useNativeDriver: true,
       }),
-      // افکت پر شدن رنگ آبی
       Animated.timing(fillAnim, {
         toValue: 1,
         duration: 400,
         useNativeDriver: false,
       }),
     ]).start(() => {
-      // ۳. پس از پایان انیمیشن، ذخیره انجام می‌شود
       executeSave();
     });
   };
@@ -214,7 +207,6 @@ export default function CourseForm() {
       setSessions([{ ...initialSession }]);
     }
 
-    // برگرداندن دکمه به حالت اولیه با یک مکث کوتاه برای زیبایی بیشتر
     setTimeout(() => {
       fillAnim.setValue(0);
       setIsAnimating(false);
@@ -230,7 +222,6 @@ export default function CourseForm() {
     setTimePicker({ ...timePicker, visible: false });
   };
 
-  // مقادیر اینترپولیت برای تغییر نرم رنگ‌ها
   const textColor = fillAnim.interpolate({
     inputRange: [0, 1],
     outputRange: [isDark ? "#d1d5db" : "#374151", "#ffffff"],
@@ -282,9 +273,11 @@ export default function CourseForm() {
           >
             کد درس
           </Text>
+          {/* فونت mono برای اعداد انگلیسی حفظ شد */}
           <TextInput
             value={code}
             onChangeText={(t) => setCode(toEnglishDigits(t))}
+            keyboardType="numeric"
             className={`border rounded-2xl h-14 px-4 font-mono text-left ${isDark ? "bg-[#1a1c23] border-[#272a35] text-white" : "bg-gray-50 border-gray-200 text-gray-900"}`}
             placeholder="e.g: 40123"
             placeholderTextColor={isDark ? "#6b7280" : "#9ca3af"}
@@ -296,10 +289,11 @@ export default function CourseForm() {
           >
             نام درس
           </Text>
+          {/* 👇 کلاس font-medium حذف شد تا فونت فارسی روی اندروید لود شود */}
           <TextInput
             value={name}
             onChangeText={setName}
-            className={`border rounded-2xl h-14 px-4 text-right font-medium ${isDark ? "bg-[#1a1c23] border-[#272a35] text-white" : "bg-gray-50 border-gray-200 text-gray-900"}`}
+            className={`border rounded-2xl h-14 px-4 text-right ${isDark ? "bg-[#1a1c23] border-[#272a35] text-white" : "bg-gray-50 border-gray-200 text-gray-900"}`}
             placeholder="مثال: برنامه‌نویسی پیشرفته"
             placeholderTextColor={isDark ? "#6b7280" : "#9ca3af"}
           />
@@ -310,10 +304,11 @@ export default function CourseForm() {
           >
             نام استاد
           </Text>
+          {/* 👇 کلاس font-medium حذف شد تا فونت فارسی روی اندروید لود شود */}
           <TextInput
             value={professor}
             onChangeText={setProfessor}
-            className={`border rounded-2xl h-14 px-4 text-right font-medium ${isDark ? "bg-[#1a1c23] border-[#272a35] text-white" : "bg-gray-50 border-gray-200 text-gray-900"}`}
+            className={`border rounded-2xl h-14 px-4 text-right ${isDark ? "bg-[#1a1c23] border-[#272a35] text-white" : "bg-gray-50 border-gray-200 text-gray-900"}`}
             placeholder="دکتر ...."
             placeholderTextColor={isDark ? "#6b7280" : "#9ca3af"}
           />
@@ -324,11 +319,12 @@ export default function CourseForm() {
           >
             تعداد واحد
           </Text>
+          {/* فونت mono برای اعداد انگلیسی حفظ شد */}
           <TextInput
             value={units}
             onChangeText={(t) => setUnits(toEnglishDigits(t))}
             keyboardType="numeric"
-            className={`border rounded-2xl h-14 px-4 text-center font-mono ${isDark ? "bg-[#1a1c23] border-[#272a35] text-white" : "bg-gray-50 border-gray-200 text-gray-900"}`}
+            className={`border rounded-2xl h-14 px-4 font-mono text-center ${isDark ? "bg-[#1a1c23] border-[#272a35] text-white" : "bg-gray-50 border-gray-200 text-gray-900"}`}
             placeholder="3"
             placeholderTextColor={isDark ? "#6b7280" : "#9ca3af"}
           />
@@ -522,11 +518,6 @@ export default function CourseForm() {
             }}
             className={`relative overflow-hidden h-[54px] w-full rounded-2xl border flex-row items-center justify-center shadow-sm ${isDark ? "bg-[#0f1115]" : "bg-gray-50"}`}
           >
-            {/* 
-                            👇 رفع کامل باگ دایره آبی: 
-                            مقیاس (scale) از عدد 0 شروع می‌شود، بنابراین مطلقاً تا قبل از انیمیشن نامرئی است.
-                            همچنین left روی -350 تنظیم شد تا به طور ۱۰۰٪ بیرون کادر باشد.
-                        */}
             <Animated.View
               style={{
                 position: "absolute",
@@ -549,7 +540,7 @@ export default function CourseForm() {
                       inputRange: [0, 1],
                       outputRange: [0, 4],
                     }),
-                  }, // شروع از صفر مطلق
+                  },
                 ],
                 zIndex: 0,
               }}

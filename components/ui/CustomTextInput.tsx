@@ -5,7 +5,11 @@ export default function CustomTextInput({ style, ...props }: TextInputProps) {
   return (
     <RNTextInput
       {...props}
-      style={[{ fontFamily: "DanaFaNum", textAlign: "right" }, style]}
+      style={[
+        { fontFamily: "DanaFaNum-Regular", textAlign: "right" },
+        style,
+        { fontWeight: "normal", fontStyle: "normal" },
+      ]}
     />
   );
 }
