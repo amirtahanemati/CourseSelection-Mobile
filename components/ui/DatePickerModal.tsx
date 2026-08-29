@@ -13,11 +13,9 @@ import { useCourseStore } from "../../store/useCourseStore";
 import Text from "./CustomText";
 import WheelPicker from "./WheelPicker";
 
-const YEARS = ["1405", "1406", "1407", "1408", "1409", "1410"];
+// تولید داینامیک سال‌ها (از 1400 تا 1415)
+const YEARS = Array.from({ length: 16 }, (_, i) => (1400 + i).toString());
 const MONTHS = Array.from({ length: 12 }, (_, i) =>
-  (i + 1).toString().padStart(2, "0"),
-);
-const DAYS = Array.from({ length: 31 }, (_, i) =>
   (i + 1).toString().padStart(2, "0"),
 );
 
@@ -37,13 +35,44 @@ export default function DatePickerModal({
   onClose,
 }: Props) {
   const isDark = useCourseStore((state) => state.theme) === "dark";
+
   const [year, setYear] = useState("1405");
   const [month, setMonth] = useState("01");
   const [day, setDay] = useState("01");
 
+  // استیت داینامیک برای نگهداری روزهای مجاز ماه انتخاب‌شده
+  const [daysList, setDaysList] = useState<string[]>([]);
+
   const [isVisible, setIsVisible] = useState(false);
   const slideAnim = useRef(new Animated.Value(height)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  // منطق اصلی تقویم جلالی برای محاسبه روزهای ماه و سال کبیسه
+  useEffect(() => {
+    const y = parseInt(year, 10);
+    const m = parseInt(month, 10);
+
+    // فرمول تقویم ۳۳ ساله برای محاسبه سال کبیسه جلالی
+    const isLeapYear = [1, 5, 9, 13, 17, 22, 26, 30].includes(y % 33);
+
+    let maxDays = 31;
+    if (m >= 7 && m <= 11) {
+      maxDays = 30; // مهر تا بهمن
+    } else if (m === 12) {
+      maxDays = isLeapYear ? 30 : 29; // اسفند
+    }
+
+    // تولید لیست روزها تا سقف مجاز
+    const newDays = Array.from({ length: maxDays }, (_, i) =>
+      (i + 1).toString().padStart(2, "0"),
+    );
+    setDaysList(newDays);
+
+    // اگر کاربر روز ۳۱ رو انتخاب کرده بود و رفت به ماهی که ۳۰ روزه است، روز اصلاح بشه
+    if (parseInt(day, 10) > maxDays) {
+      setDay(maxDays.toString().padStart(2, "0"));
+    }
+  }, [year, month]);
 
   const panResponder = useRef(
     PanResponder.create({
@@ -80,7 +109,7 @@ export default function DatePickerModal({
       if (initialDate.includes("/")) {
         const [y, m, d] = initialDate.split("/");
         setYear(YEARS.includes(y) ? y : "1405");
-        setMonth(m);
+        setMonth(MONTHS.includes(m) ? m : "01");
         setDay(d);
       }
       Animated.parallel([
@@ -278,8 +307,9 @@ export default function DatePickerModal({
               </View>
 
               <View style={{ flex: 1, height: 162 }}>
+                {/* 👈 استفاده از استیت داینامیک daysList به جای ثابت */}
                 <WheelPicker
-                  items={DAYS}
+                  items={daysList}
                   selectedValue={day}
                   onValueChange={setDay}
                 />
