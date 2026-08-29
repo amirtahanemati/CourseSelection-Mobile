@@ -269,9 +269,8 @@ export default function CourseForm() {
           <TextInput
             value={code}
             onChangeText={(t) => setCode(toEnglishDigits(t))}
-            keyboardType="numeric"
             className={`border rounded-2xl h-14 px-4 font-mono text-left ${isDark ? "bg-[#1a1c23] border-[#272a35] text-white" : "bg-gray-50 border-gray-200 text-gray-900"}`}
-            placeholder="e.g: 40123"
+            placeholder="e.g: 40123_01"
             placeholderTextColor={isDark ? "#6b7280" : "#9ca3af"}
           />
         </View>
