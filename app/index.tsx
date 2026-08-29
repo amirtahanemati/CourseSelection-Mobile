@@ -1,10 +1,10 @@
-import * as FileSystem from "expo-file-system/legacy";
+import * as FileSystem from "expo-file-system";
 import * as NavigationBar from "expo-navigation-bar";
 import * as Sharing from "expo-sharing";
 import { StatusBar } from "expo-status-bar";
 import * as SystemUI from "expo-system-ui";
-import React, { useEffect, useRef } from "react";
-import { Dimensions, Platform, ScrollView, View } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { Animated, Dimensions, Platform, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
 import ViewShot from "react-native-view-shot";
@@ -16,7 +16,6 @@ import Footer from "../components/layout/Footer";
 import Topbar from "../components/layout/Topbar";
 import WelcomeModal from "../components/ui/WelcomeModal";
 import { useCourseStore } from "../store/useCourseStore";
-import { buildExportFilename } from "../utils/helpers";
 
 const screenWidth = Dimensions.get("window").width;
 
@@ -27,6 +26,11 @@ export default function Home() {
 
   const bgColor = isDark ? "#090a0f" : "#f5f7fa";
   const timelineRef = useRef<ViewShot>(null);
+  const [isBannerDismissed, setIsBannerDismissed] = useState(false);
+  const [isAtBottom, setIsAtBottom] = useState(false);
+
+  const bannerAnim = useRef(new Animated.Value(150)).current;
+  const fadeAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     if (Platform.OS === "android") {
@@ -35,7 +39,44 @@ export default function Home() {
     }
   }, [isDark, bgColor]);
 
-  // 👈 تبدیل به تابع ناهمگام و بازگرداندن Promise برای مدیریت بستن مودال
+  useEffect(() => {
+    Animated.spring(bannerAnim, {
+      toValue: 0,
+      damping: 20,
+      stiffness: 150,
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: isAtBottom ? 0 : 1,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+  }, [isAtBottom]);
+
+  // تابع بستن نوتیف با دکمه X
+  const dismissBanner = () => {
+    Animated.timing(bannerAnim, {
+      toValue: 150,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => setIsBannerDismissed(true));
+  };
+
+  // محاسبه اسکرول کاربر برای تشخیص رسیدن به انتهای صفحه
+  const handleScroll = (event: any) => {
+    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+    // اگر ۱۲۰ پیکسل مانده به انتها بود، یعنی به فوتر اصلی رسیده‌ایم
+    const isBottom =
+      layoutMeasurement.height + contentOffset.y >= contentSize.height - 120;
+
+    if (isBottom !== isAtBottom) {
+      setIsAtBottom(isBottom);
+    }
+  };
+
   const handleCaptureTimeline = async (): Promise<void> => {
     if (courses.length === 0) {
       Toast.show({ type: "error", text1: "تایم‌لاین خالی است." });
@@ -57,7 +98,7 @@ export default function Home() {
                   const imgUri =
                     await FS.StorageAccessFramework.createFileAsync(
                       permissions.directoryUri,
-                      buildExportFilename("weekly-schedule", "png"),
+                      `daneshjob_timeline_${Date.now()}.png`,
                       "image/png",
                     );
                   const base64Data = await FS.readAsStringAsync(uri, {
@@ -71,10 +112,9 @@ export default function Home() {
                     type: "success",
                     text1: "تصویر با کیفیت در گوشی شما ذخیره شد.",
                   });
-                  resolve(); // 👈 عملیات موفق، مودال می‌تواند بسته شود
+                  resolve();
                   return;
                 } else {
-                  // کاربر انتخاب پوشه را لغو کرده، پس مودال نباید بسته شود
                   reject(new Error("Canceled by user"));
                   return;
                 }
@@ -113,6 +153,25 @@ export default function Home() {
       <StatusBar style={isDark ? "light" : "dark"} />
       <WelcomeModal />
 
+      {/* لایه فوتر شناور (نوتیفیکیشن) */}
+      {!isBannerDismissed && (
+        <Animated.View
+          style={{
+            position: "absolute",
+            bottom: insets.bottom + 16,
+            left: 16,
+            right: 16,
+            zIndex: 100,
+            transform: [{ translateY: bannerAnim }],
+            opacity: fadeAnim,
+          }}
+          pointerEvents={isAtBottom ? "none" : "auto"} // غیرفعال کردن کلیک وقتی محو شده
+        >
+          <Footer isFloating onClose={dismissBanner} />
+        </Animated.View>
+      )}
+
+      {/* لایه مخفی برای تولید خروجی عکس با کیفیت */}
       <View
         style={{
           position: "absolute",
@@ -162,11 +221,15 @@ export default function Home() {
           paddingBottom: 32 + insets.bottom,
         }}
         showsVerticalScrollIndicator={false}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
       >
         <CourseForm />
         <MobileTimeline />
 
         <View className="flex-1 min-h-[40px]" />
+
+        {/* فوتر اصلی چسبیده به ته صفحه */}
         <Footer />
       </ScrollView>
     </View>
