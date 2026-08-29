@@ -43,12 +43,13 @@ export default function MobileTimeline() {
 
   return (
     <View className="flex-col pb-10">
+      {/* 👇 ترفند مقیاس منفی: اسکرول از سمت راست شروع می‌شود */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         className="mb-6"
+        style={{ transform: [{ scaleX: -1 }] }}
         contentContainerStyle={{
-          flexDirection: "row-reverse",
           paddingHorizontal: 4,
           gap: 8,
         }}
@@ -58,6 +59,7 @@ export default function MobileTimeline() {
             key={day}
             onPress={() => setActiveDay(day)}
             activeOpacity={0.7}
+            style={{ transform: [{ scaleX: -1 }] }} // 👈 برگرداندن کارت به جهت درست تا آینه نشود
             className={`px-6 py-3 rounded-2xl border ${
               activeDay === day
                 ? "bg-blue-500 border-blue-500 shadow-sm"
@@ -92,11 +94,10 @@ export default function MobileTimeline() {
             const baseColor = colorFor(course.name);
             const isSelected = selectedCourseId === course.id;
 
-            // رنگ‌بندی داینامیک بر اساس انتخاب شدن یا نشدن
             const glassBg = isSelected
               ? isDark
                 ? "rgba(59, 130, 246, 0.15)"
-                : "rgba(59, 130, 246, 0.1)" // آبی ملایم هنگام انتخاب
+                : "rgba(59, 130, 246, 0.1)"
               : baseColor
                   .replace("hsl", "hsla")
                   .replace(")", isDark ? ", 0.12)" : ", 0.08)");
@@ -110,10 +111,16 @@ export default function MobileTimeline() {
             return (
               <TouchableOpacity
                 key={`${course.id}-${index}`}
-                onPress={() => setBottomSheetCourse(course)} // لمس کوتاه = باز شدن کشو
+                onPress={() => {
+                  if (selectedCourseId) {
+                    setSelectedCourseId(isSelected ? null : course.id);
+                  } else {
+                    setBottomSheetCourse(course);
+                  }
+                }}
                 onLongPress={() =>
                   setSelectedCourseId(isSelected ? null : course.id)
-                } // لمس طولانی = انتخاب
+                }
                 activeOpacity={0.7}
                 className="flex-row-reverse items-stretch gap-4 relative"
               >
@@ -145,7 +152,6 @@ export default function MobileTimeline() {
                     borderRightColor: isSelected ? "#3b82f6" : baseColor,
                   }}
                 >
-                  {/* نشانگر انتخاب شدن (تیک آبی شناور) */}
                   {isSelected && (
                     <View className="absolute top-3 left-3 w-6 h-6 bg-blue-500 rounded-full items-center justify-center shadow-md z-10">
                       <Check size={14} color="white" strokeWidth={3} />
