@@ -1,4 +1,5 @@
 import {
+  AlertTriangle,
   BookOpen,
   CalendarDays,
   Clock,
@@ -13,9 +14,10 @@ import {
   Animated,
   Dimensions,
   Modal,
+  PanResponder,
   ScrollView,
+  StyleSheet,
   TouchableOpacity,
-  TouchableWithoutFeedback,
   View,
 } from "react-native";
 import Toast from "react-native-toast-message";
@@ -41,16 +43,50 @@ export default function BottomSheet({ course, onClose }: Props) {
   const deleteCourse = useCourseStore((state) => state.deleteCourse);
 
   const [visible, setVisible] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+
   const slideAnim = useRef(new Animated.Value(height)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onStartShouldSetPanResponderCapture: () => false,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        return (
+          gestureState.dy > 5 &&
+          Math.abs(gestureState.dy) > Math.abs(gestureState.dx)
+        );
+      },
+      onMoveShouldSetPanResponderCapture: () => false,
+      onPanResponderMove: (_, gestureState) => {
+        if (gestureState.dy > 0) {
+          slideAnim.setValue(gestureState.dy);
+        }
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dy > 80 || gestureState.vy > 0.8) {
+          handleClose();
+        } else {
+          Animated.spring(slideAnim, {
+            toValue: 0,
+            damping: 25,
+            stiffness: 250,
+            useNativeDriver: true,
+          }).start();
+        }
+      },
+    }),
+  ).current;
 
   useEffect(() => {
     if (course) {
       setVisible(true);
+      setShowConfirm(false);
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
-          duration: 200,
+          duration: 250,
           useNativeDriver: true,
         }),
         Animated.spring(slideAnim, {
@@ -72,7 +108,10 @@ export default function BottomSheet({ course, onClose }: Props) {
           duration: 250,
           useNativeDriver: true,
         }),
-      ]).start(() => setVisible(false));
+      ]).start(() => {
+        setVisible(false);
+        setShowConfirm(false);
+      });
     }
   }, [course]);
 
@@ -86,11 +125,25 @@ export default function BottomSheet({ course, onClose }: Props) {
     .replace("hsl", "hsla")
     .replace(")", isDark ? ", 0.15)" : ", 0.1)");
 
-  const handleDelete = () => {
+  const handleClose = () => {
+    onClose();
+  };
+
+  const executeDelete = () => {
     deleteCourse(activeCourse.id);
     if (isSelected) setSelectedCourseId(null);
     Toast.show({ type: "success", text1: "درس با موفقیت حذف شد." });
-    onClose();
+    handleClose();
+  };
+
+  const handleEdit = () => {
+    setSelectedCourseId(activeCourse.id);
+    handleClose();
+    Toast.show({
+      type: "info",
+      text1: "حالت ویرایش فعال شد",
+      text2: "فرم بالای صفحه را بررسی کنید.",
+    });
   };
 
   return (
@@ -98,66 +151,81 @@ export default function BottomSheet({ course, onClose }: Props) {
       visible={visible}
       transparent
       animationType="none"
-      onRequestClose={onClose}
+      onRequestClose={handleClose}
     >
       <View className="flex-1 justify-end">
-        <TouchableWithoutFeedback onPress={onClose}>
-          <Animated.View
-            style={{ opacity: fadeAnim }}
-            className="absolute inset-0 bg-black/60"
+        <Animated.View style={[StyleSheet.absoluteFill, { opacity: fadeAnim }]}>
+          <TouchableOpacity
+            style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.65)" }}
+            activeOpacity={1}
+            onPress={handleClose}
           />
-        </TouchableWithoutFeedback>
+        </Animated.View>
 
         <Animated.View
           style={{
             transform: [{ translateY: slideAnim }],
-            // اضافه شدن سایه رو به بالا
             shadowColor: "#000",
-            shadowOffset: { width: 0, height: -10 },
-            shadowOpacity: isDark ? 0.3 : 0.1,
-            shadowRadius: 15,
-            elevation: 20,
+            shadowOffset: { width: 0, height: -8 },
+            shadowOpacity: isDark ? 0.6 : 0.15,
+            shadowRadius: 20,
+            elevation: 30,
           }}
-          className={`rounded-t-[32px] p-6 pb-10 w-full max-h-[90%] ${isDark ? "bg-[#12141c]" : "bg-white"}`}
+          className={`rounded-t-[32px] pb-10 w-full max-h-[90%] border-t ${isDark ? "bg-[#12141c] border-[#1f222a]" : "bg-white border-transparent"}`}
         >
           <View
-            className="w-12 h-1.5 rounded-full self-center mb-6"
-            style={{ backgroundColor: isDark ? "#2a2d35" : "#e5e7eb" }}
-          />
+            {...panResponder.panHandlers}
+            style={{ backgroundColor: "transparent" }}
+            className="px-6 pt-5"
+          >
+            <View
+              className="w-16 h-1.5 rounded-full self-center mb-6 mt-1"
+              style={{ backgroundColor: isDark ? "#2a2d35" : "#e5e7eb" }}
+            />
 
-          <View className="flex-row-reverse items-center justify-between mb-8">
-            <View className="flex-row-reverse items-center gap-4 flex-1">
-              <View
-                className="w-14 h-14 rounded-2xl items-center justify-center border"
-                style={{
-                  backgroundColor: lightBgColor,
-                  borderColor: baseColor,
-                }}
+            <View className="flex-row-reverse items-center justify-between mb-8">
+              <View className="flex-row-reverse items-center gap-4 flex-1">
+                <View
+                  className="w-14 h-14 rounded-2xl items-center justify-center border"
+                  style={{
+                    backgroundColor: lightBgColor,
+                    borderColor: baseColor,
+                  }}
+                >
+                  <BookOpen size={26} color={baseColor} />
+                </View>
+                <View className="flex-shrink">
+                  {/* 
+                      👇 باگ برش خوردن متن (Clipping) حل شد:
+                      کلاس‌های pt-1 و leading-8 اضافه شدند تا کلاه حرف «آ» زیر باکس نرود 
+                  */}
+                  <Text
+                    className={`text-xl font-extrabold mb-1 pt-1 leading-8 ${isDark ? "text-white" : "text-gray-900"}`}
+                  >
+                    {activeCourse.name}
+                  </Text>
+                  <Text
+                    className={`text-sm font-medium ${isDark ? "text-gray-400" : "text-gray-500"}`}
+                  >
+                    جزئیات و زمان‌بندی کلاس
+                  </Text>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                onPress={handleClose}
+                activeOpacity={0.7}
+                className={`p-2.5 rounded-full ${isDark ? "bg-[#1a1c23]" : "bg-gray-100"}`}
               >
-                <BookOpen size={26} color={baseColor} />
-              </View>
-              <View className="flex-shrink">
-                <Text
-                  className={`text-xl font-extrabold mb-1 ${isDark ? "text-white" : "text-gray-900"}`}
-                >
-                  {activeCourse.name}
-                </Text>
-                <Text
-                  className={`text-sm font-medium ${isDark ? "text-gray-400" : "text-gray-500"}`}
-                >
-                  جزئیات و زمان‌بندی کلاس
-                </Text>
-              </View>
+                <X size={20} color={isDark ? "#9ca3af" : "#6b7280"} />
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity
-              onPress={onClose}
-              className={`p-2.5 rounded-full ${isDark ? "bg-[#1a1c23]" : "bg-gray-100"}`}
-            >
-              <X size={20} color={isDark ? "#9ca3af" : "#6b7280"} />
-            </TouchableOpacity>
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false} className="flex-col">
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            className="flex-col px-6"
+          >
             <View className="flex-row-reverse gap-3 mb-6">
               <View
                 className={`flex-1 p-4 rounded-2xl border ${isDark ? "bg-[#161822] border-[#1f222a]" : "bg-gray-50 border-gray-100"}`}
@@ -238,30 +306,70 @@ export default function BottomSheet({ course, onClose }: Props) {
               ))}
             </View>
 
-            <View className="flex-row-reverse gap-3 mb-4 mt-2">
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={() => {
-                  Toast.show({ type: "info", text1: "به زودی..." });
-                  onClose();
-                }}
-                className={`flex-1 flex-row-reverse items-center justify-center gap-2 py-3.5 rounded-2xl border ${isDark ? "bg-[#1a1c23] border-[#272a35]" : "bg-gray-50 border-gray-200"}`}
-              >
-                <Edit3 size={18} color={isDark ? "#d1d5db" : "#4b5563"} />
-                <Text
-                  className={`font-bold text-sm ${isDark ? "text-gray-300" : "text-gray-700"}`}
+            <View className="mt-2 mb-4">
+              {showConfirm ? (
+                <View
+                  className={`p-4 rounded-3xl border ${isDark ? "bg-red-500/10 border-red-500/20" : "bg-red-50 border-red-100"}`}
                 >
-                  ویرایش
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={handleDelete}
-                className="flex-1 flex-row-reverse items-center justify-center gap-2 py-3.5 rounded-2xl bg-red-500/10 border border-red-500/20"
-              >
-                <Trash2 size={18} color="#ef4444" />
-                <Text className="text-red-500 font-bold text-sm">حذف درس</Text>
-              </TouchableOpacity>
+                  <View className="flex-row-reverse items-center justify-center gap-2 mb-5">
+                    <AlertTriangle size={20} color="#ef4444" />
+                    <Text className="text-red-500 font-extrabold text-sm text-center">
+                      آیا از حذف این درس مطمئن هستید؟
+                    </Text>
+                  </View>
+
+                  {/* 👇 دکمه‌های تاییدیه خطی نیز جابجا شدند */}
+                  <View className="flex-row-reverse gap-3">
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      onPress={() => setShowConfirm(false)}
+                      className={`flex-1 py-3.5 rounded-xl items-center justify-center border ${isDark ? "bg-[#1a1c23] border-[#272a35]" : "bg-white border-gray-200"}`}
+                    >
+                      <Text
+                        className={`font-bold text-sm ${isDark ? "text-gray-300" : "text-gray-700"}`}
+                      >
+                        انصراف
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      onPress={executeDelete}
+                      className="flex-1 py-3.5 rounded-xl bg-red-500 items-center justify-center shadow-sm"
+                    >
+                      <Text className="text-white font-extrabold text-sm">
+                        بله، حذف کن
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : (
+                <View className="flex-row-reverse gap-3">
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={handleEdit}
+                    className={`flex-1 flex-row-reverse items-center justify-center gap-2 py-3.5 rounded-2xl border ${isDark ? "bg-[#1a1c23] border-[#272a35]" : "bg-gray-50 border-gray-200"}`}
+                  >
+                    <Edit3 size={18} color={isDark ? "#d1d5db" : "#4b5563"} />
+                    <Text
+                      className={`font-bold text-sm ${isDark ? "text-gray-300" : "text-gray-700"}`}
+                    >
+                      ویرایش
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={() => setShowConfirm(true)}
+                    className="flex-1 flex-row-reverse items-center justify-center gap-2 py-3.5 rounded-2xl bg-red-500/10 border border-red-500/20"
+                  >
+                    <Trash2 size={18} color="#ef4444" />
+                    <Text className="text-red-500 font-bold text-sm">
+                      حذف درس
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
           </ScrollView>
         </Animated.View>
