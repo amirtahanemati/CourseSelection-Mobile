@@ -8,9 +8,11 @@ import {
   Save,
   X,
 } from "lucide-react-native";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
+  Animated,
   Modal,
+  Pressable,
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
@@ -32,6 +34,8 @@ import WheelPicker from "../ui/WheelPicker";
 const DAYS = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه"];
 const initialSession: Session = { day: DAYS[0], start: "08:00", end: "10:00" };
 
+const AnimatedCustomText = Animated.createAnimatedComponent(Text);
+
 export default function CourseForm() {
   const {
     courses,
@@ -49,11 +53,10 @@ export default function CourseForm() {
   const [units, setUnits] = useState("");
 
   const [noExam, setNoExam] = useState(false);
-  const [examDate, setExamDate] = useState("1403/03/20");
+  const [examDate, setExamDate] = useState("1405/03/20");
   const [examTime, setExamTime] = useState("08:30");
   const [sessions, setSessions] = useState<Session[]>([{ ...initialSession }]);
 
-  // تنظیمات مودال‌ها
   const [timePicker, setTimePicker] = useState<{
     visible: boolean;
     target: "exam" | "start" | "end";
@@ -67,7 +70,11 @@ export default function CourseForm() {
     day: string;
   }>({ visible: false, index: 0, day: DAYS[0] });
 
-  // بارگذاری اطلاعات هنگام ویرایش
+  // استیت‌ها و رفرنس‌های انیمیشن
+  const fillAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const [isAnimating, setIsAnimating] = useState(false);
+
   useEffect(() => {
     if (selectedCourseId) {
       const course = courses.find((c) => c.id === selectedCourseId);
@@ -77,7 +84,7 @@ export default function CourseForm() {
         setProfessor(course.professor || "");
         setUnits(course.units ? course.units.toString() : "");
         setNoExam(course.exam_date === null);
-        setExamDate(course.exam_date || "1403/03/20");
+        setExamDate(course.exam_date || "1405/03/20");
         setExamTime(course.exam_time || "08:30");
         setSessions(JSON.parse(JSON.stringify(course.sessions)));
       }
@@ -106,7 +113,6 @@ export default function CourseForm() {
       if (!newSess.start || !newSess.end) continue;
       const st = parseTimeToMinutes(newSess.start);
       const en = parseTimeToMinutes(newSess.end);
-
       for (const course of courses) {
         if (course.id === ignoreId) continue;
         for (const existSess of course.sessions) {
@@ -127,10 +133,13 @@ export default function CourseForm() {
     return null;
   };
 
-  const handleSubmit = () => {
+  // 👈 متد اصلی کلیک: اول اعتبارسنجی، بعد اجرای انیمیشن، و در پایان ذخیره‌سازی
+  const handlePress = () => {
+    if (isAnimating) return; // جلوگیری از کلیک مجدد هنگام انیمیشن
+
+    // ۱. اعتبارسنجی فرم
     if (!name || !code)
       return Toast.show({ type: "error", text1: "نام و کد درس الزامی است." });
-
     for (let i = 0; i < sessions.length; i++) {
       const s = sessions[i];
       if (!s.start || !s.end)
@@ -145,7 +154,6 @@ export default function CourseForm() {
         });
       }
     }
-
     const conflict = checkConflict(sessions, selectedCourseId);
     if (conflict)
       return Toast.show({
@@ -153,6 +161,34 @@ export default function CourseForm() {
         text1: `تداخل زمانی با درس "${conflict}"!`,
       });
 
+    setIsAnimating(true);
+
+    // ۲. اجرای انیمیشن‌ها به صورت متوالی و موازی
+    Animated.sequence([
+      // افکت فشرده شدن دکمه
+      Animated.timing(scaleAnim, {
+        toValue: 0.95,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      // افکت پر شدن رنگ آبی
+      Animated.timing(fillAnim, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: false,
+      }),
+    ]).start(() => {
+      // ۳. پس از پایان انیمیشن، ذخیره انجام می‌شود
+      executeSave();
+    });
+  };
+
+  const executeSave = () => {
     const courseData = {
       code,
       name,
@@ -177,6 +213,12 @@ export default function CourseForm() {
       setNoExam(false);
       setSessions([{ ...initialSession }]);
     }
+
+    // برگرداندن دکمه به حالت اولیه با یک مکث کوتاه برای زیبایی بیشتر
+    setTimeout(() => {
+      fillAnim.setValue(0);
+      setIsAnimating(false);
+    }, 150);
   };
 
   const handleTimeConfirm = (time: string) => {
@@ -187,6 +229,28 @@ export default function CourseForm() {
       updateSession(timePicker.index, "end", time);
     setTimePicker({ ...timePicker, visible: false });
   };
+
+  // مقادیر اینترپولیت برای تغییر نرم رنگ‌ها
+  const textColor = fillAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [isDark ? "#d1d5db" : "#374151", "#ffffff"],
+  });
+
+  const iconBgColor = fillAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [
+      isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)",
+      "rgba(255,255,255,0.2)",
+    ],
+  });
+
+  const iconBorderColor = fillAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [
+      isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)",
+      "transparent",
+    ],
+  });
 
   return (
     <View
@@ -271,7 +335,6 @@ export default function CourseForm() {
         </View>
       </View>
 
-      {/* بخش امتحان */}
       <View
         className={`border p-4 rounded-2xl mb-6 ${isDark ? "bg-[#161822] border-[#1f222a]" : "bg-gray-50/50 border-gray-200"}`}
       >
@@ -338,7 +401,6 @@ export default function CourseForm() {
         </View>
       </View>
 
-      {/* بخش جلسات */}
       <View className="mb-6">
         <Text
           className={`text-sm font-extrabold mb-4 text-right ${isDark ? "text-white" : "text-gray-800"}`}
@@ -448,23 +510,86 @@ export default function CourseForm() {
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity
-        onPress={handleSubmit}
-        className={`border h-14 rounded-2xl flex-row items-center justify-center gap-3 active:scale-[0.98] transition-transform ${selectedCourseId ? "bg-gray-800 border-gray-900 dark:bg-gray-100 dark:border-white" : isDark ? "bg-[#0f1115] border-[#1f222a]" : "bg-blue-500 border-blue-600 shadow-md"}`}
+      <View
+        className="mt-2 border-t pt-5"
+        style={{ borderColor: isDark ? "#1f222a" : "#e5e7eb" }}
       >
-        {selectedCourseId ? (
-          <Edit2 size={20} color={isDark ? "#090a0f" : "white"} />
-        ) : (
-          <Save size={20} color="white" />
-        )}
-        <Text
-          className={`font-extrabold text-base ${selectedCourseId && isDark ? "text-[#090a0f]" : "text-white"}`}
-        >
-          {selectedCourseId ? "ثبت تغییرات ویرایش" : "ذخیره درس"}
-        </Text>
-      </TouchableOpacity>
+        <Pressable onPress={handlePress} className="w-full">
+          <Animated.View
+            style={{
+              transform: [{ scale: scaleAnim }],
+              borderColor: isDark ? "#272a35" : "#e5e7eb",
+            }}
+            className={`relative overflow-hidden h-[54px] w-full rounded-2xl border flex-row items-center justify-center shadow-sm ${isDark ? "bg-[#0f1115]" : "bg-gray-50"}`}
+          >
+            {/* 
+                            👇 رفع کامل باگ دایره آبی: 
+                            مقیاس (scale) از عدد 0 شروع می‌شود، بنابراین مطلقاً تا قبل از انیمیشن نامرئی است.
+                            همچنین left روی -350 تنظیم شد تا به طور ۱۰۰٪ بیرون کادر باشد.
+                        */}
+            <Animated.View
+              style={{
+                position: "absolute",
+                left: -350,
+                top: "50%",
+                marginTop: -100,
+                width: 200,
+                height: 200,
+                borderRadius: 100,
+                backgroundColor: "#3b82f6",
+                transform: [
+                  {
+                    translateX: fillAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0, 450],
+                    }),
+                  },
+                  {
+                    scale: fillAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0, 4],
+                    }),
+                  }, // شروع از صفر مطلق
+                ],
+                zIndex: 0,
+              }}
+            />
 
-      {/* مودال‌های دیالوگ */}
+            <Animated.View
+              style={{
+                backgroundColor: iconBgColor,
+                borderColor: iconBorderColor,
+                borderWidth: 1,
+                padding: 6,
+                borderRadius: 999,
+                zIndex: 10,
+              }}
+            >
+              {selectedCourseId ? (
+                <Edit2
+                  size={16}
+                  color={isAnimating ? "white" : isDark ? "#d1d5db" : "#374151"}
+                />
+              ) : (
+                <Save
+                  size={16}
+                  color={isAnimating ? "white" : isDark ? "#d1d5db" : "#374151"}
+                />
+              )}
+            </Animated.View>
+
+            <View style={{ width: 12 }} />
+
+            <AnimatedCustomText
+              style={{ color: textColor, zIndex: 10 }}
+              className="font-extrabold text-base pt-1"
+            >
+              {selectedCourseId ? "ثبت تغییرات ویرایش" : "ذخیره درس"}
+            </AnimatedCustomText>
+          </Animated.View>
+        </Pressable>
+      </View>
+
       <TimePickerModal
         visible={timePicker.visible}
         initialTime={timePicker.time}
@@ -481,7 +606,6 @@ export default function CourseForm() {
         onClose={() => setIsDatePickerOpen(false)}
       />
 
-      {/* مودال انتخاب روز */}
       <Modal
         visible={dayPicker.visible}
         transparent
