@@ -49,6 +49,19 @@ export function colorFor(key: string): string {
   return `hsl(${hue}, 85%, 60%)`;
 }
 
+// Build a filesystem-safe, human-readable timestamp: 2026-08-29_14-05
+function getExportTimestamp(): string {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_${pad(d.getHours())}-${pad(d.getMinutes())}`;
+}
+
+// Build a consistent export filename, e.g. buildExportFilename("course-backup", "json")
+// -> "course-backup_2026-08-29_14-05.json"
+export function buildExportFilename(prefix: string, ext: string): string {
+  return `${prefix}_${getExportTimestamp()}.${ext}`;
+}
+
 export function toEnglishDigits(str: string): string {
   if (!str) return "";
   return str
