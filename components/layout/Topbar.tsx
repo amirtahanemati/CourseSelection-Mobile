@@ -4,8 +4,8 @@ import React, { useState } from "react";
 import { TouchableOpacity, View } from "react-native";
 import Toast from "react-native-toast-message";
 import { useCourseStore } from "../../store/useCourseStore";
-import ConfirmModal from "../ui/ConfirmModal";
-import Text from "../ui/CustomText"; // 👈 ایمپورت کاستوم برای اعمال دقیق فونت دانافنوم
+import ConfirmModal from "../ui/ConfirmModal"; // 👈 ایمپورت مودال جدید
+import Text from "../ui/CustomText";
 import ExportModal from "../ui/ExportModal";
 import Logo from "../ui/Logo";
 import ThemeToggle from "../ui/ThemeToggle";
@@ -18,12 +18,11 @@ export default function Topbar() {
     (state) => state.setSelectedCourseId,
   );
 
-  // دریافت وضعیت تم از استور
   const theme = useCourseStore((state) => state.theme);
   const isDark = theme === "dark";
 
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
-  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false); // 👈 استیت مودال حذف
 
   const totalUnits = courses.reduce(
     (sum, course) => sum + (course.units || 0),
@@ -31,6 +30,7 @@ export default function Topbar() {
   );
   const selectedCourse = courses.find((c) => c.id === selectedCourseId);
 
+  // باز کردن مودال تایید حذف
   const handleDeleteClick = () => {
     if (!selectedCourseId) {
       Toast.show({ type: "error", text1: "ابتدا یک درس را انتخاب کنید." });
@@ -39,9 +39,11 @@ export default function Topbar() {
     setIsConfirmOpen(true);
   };
 
+  // عملیات نهایی حذف که توسط مودال صدا زده می‌شود
   const executeDelete = () => {
     if (selectedCourseId) {
       deleteCourse(selectedCourseId);
+      setSelectedCourseId(null);
       Toast.show({ type: "success", text1: "درس با موفقیت حذف شد." });
     }
     setIsConfirmOpen(false);
@@ -62,7 +64,6 @@ export default function Topbar() {
           isDark ? "bg-[#12141c] border-[#1f222a]" : "bg-white border-gray-200"
         }`}
       >
-        {/* سمت چپ: دکمه‌های عملیاتی */}
         <View className="flex-row items-center gap-1 shrink-0">
           <ThemeToggle />
 
@@ -99,7 +100,6 @@ export default function Topbar() {
           </TouchableOpacity>
         </View>
 
-        {/* سمت راست: عنوان و آمار */}
         <View className="flex-row items-center gap-2 shrink">
           <View className="justify-center items-end flex-shrink">
             <Text
@@ -142,12 +142,14 @@ export default function Topbar() {
         </View>
       </View>
 
+      {/* 👈 رندر کردن مودال اختصاصی */}
       <ConfirmModal
         isOpen={isConfirmOpen}
         onClose={() => setIsConfirmOpen(false)}
         onConfirm={executeDelete}
         courseName={selectedCourse?.name || "انتخاب شده"}
       />
+
       <ExportModal
         isOpen={isExportMenuOpen}
         onClose={() => setIsExportMenuOpen(false)}
