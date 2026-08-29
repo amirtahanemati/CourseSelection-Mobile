@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { TouchableOpacity, View } from "react-native";
 import Toast from "react-native-toast-message";
 import { useCourseStore } from "../../store/useCourseStore";
-import ConfirmModal from "../ui/ConfirmModal"; // 👈 ایمپورت مودال جدید
+import ConfirmModal from "../ui/ConfirmModal";
 import Text from "../ui/CustomText";
 import ExportModal from "../ui/ExportModal";
 import Logo from "../ui/Logo";
@@ -22,7 +22,7 @@ export default function Topbar() {
   const isDark = theme === "dark";
 
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
-  const [isConfirmOpen, setIsConfirmOpen] = useState(false); // 👈 استیت مودال حذف
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
   const totalUnits = courses.reduce(
     (sum, course) => sum + (course.units || 0),
@@ -30,7 +30,6 @@ export default function Topbar() {
   );
   const selectedCourse = courses.find((c) => c.id === selectedCourseId);
 
-  // باز کردن مودال تایید حذف
   const handleDeleteClick = () => {
     if (!selectedCourseId) {
       Toast.show({ type: "error", text1: "ابتدا یک درس را انتخاب کنید." });
@@ -39,7 +38,6 @@ export default function Topbar() {
     setIsConfirmOpen(true);
   };
 
-  // عملیات نهایی حذف که توسط مودال صدا زده می‌شود
   const executeDelete = () => {
     if (selectedCourseId) {
       deleteCourse(selectedCourseId);
@@ -142,7 +140,6 @@ export default function Topbar() {
         </View>
       </View>
 
-      {/* 👈 رندر کردن مودال اختصاصی */}
       <ConfirmModal
         isOpen={isConfirmOpen}
         onClose={() => setIsConfirmOpen(false)}
@@ -150,8 +147,9 @@ export default function Topbar() {
         courseName={selectedCourse?.name || "انتخاب شده"}
       />
 
+      {/* 👇 Fixed prop name from isOpen to visible */}
       <ExportModal
-        isOpen={isExportMenuOpen}
+        visible={isExportMenuOpen}
         onClose={() => setIsExportMenuOpen(false)}
       />
     </>
