@@ -11,7 +11,6 @@ import Logo from "../ui/Logo";
 import ThemeToggle from "../ui/ThemeToggle";
 
 interface Props {
-  // 👈 تبدیل پراپ به Promise برای اینکه مودال منتظر پایان تولید عکس بماند
   onExportImage?: () => Promise<void>;
 }
 
@@ -37,7 +36,10 @@ export default function Topbar({ onExportImage }: Props) {
 
   const handleDeleteClick = () => {
     if (!selectedCourseId) {
-      Toast.show({ type: "error", text1: "ابتدا یک درس را انتخاب کنید." });
+      Toast.show({
+        type: "error",
+        text1: "ابتدا یک درس را از برنامه انتخاب کنید.",
+      });
       return;
     }
     setIsConfirmOpen(true);
@@ -60,6 +62,24 @@ export default function Topbar({ onExportImage }: Props) {
     Toast.show({ type: "success", text1: "کد دروس در کلیپ‌بورد کپی شد." });
   };
 
+  // 👈 منطق جدید و هوشمند برای دکمه + (افزودن)
+  const handleAddClick = () => {
+    if (selectedCourseId) {
+      setSelectedCourseId(null);
+      Toast.show({
+        type: "success",
+        text1: "آماده برای افزودن",
+        text2: "فرم بالای صفحه برای ثبت درس جدید آماده شد.",
+      });
+    } else {
+      Toast.show({
+        type: "info",
+        text1: "شما در حالت افزودن هستید",
+        text2: "برای ثبت درس جدید به فرم بالای صفحه مراجعه کنید.",
+      });
+    }
+  };
+
   return (
     <>
       <View
@@ -71,49 +91,90 @@ export default function Topbar({ onExportImage }: Props) {
           <ThemeToggle />
 
           <View
-            className={`w-[1px] h-4 mx-0.5 ${isDark ? "bg-[#2a2d35]" : "bg-gray-200"}`}
+            className={`w-[1px] h-4 mx-0.5 ${
+              isDark ? "bg-[#2a2d35]" : "bg-gray-200"
+            }`}
           ></View>
 
           <TouchableOpacity
             onPress={() => setIsExportMenuOpen(true)}
-            className={`w-7 h-7 items-center justify-center rounded-xl ${isDark ? "bg-[#1f222a]" : "bg-gray-100"}`}
+            className={`w-7 h-7 items-center justify-center rounded-xl ${
+              isDark ? "bg-[#1f222a]" : "bg-gray-100"
+            }`}
           >
             <Download size={14} color={isDark ? "#9ca3af" : "#6b7280"} />
           </TouchableOpacity>
 
           <TouchableOpacity
             onPress={handleCopyCodes}
-            className={`w-7 h-7 items-center justify-center rounded-xl ${isDark ? "bg-[#1f222a]" : "bg-gray-100"}`}
+            className={`w-7 h-7 items-center justify-center rounded-xl ${
+              isDark ? "bg-[#1f222a]" : "bg-gray-100"
+            }`}
           >
             <Copy size={14} color={isDark ? "#9ca3af" : "#6b7280"} />
           </TouchableOpacity>
 
+          {/* 👈 دکمه حذف: رنگ و عملکرد وابسته به انتخاب درس */}
           <TouchableOpacity
             onPress={handleDeleteClick}
-            className={`w-7 h-7 items-center justify-center rounded-xl ${isDark ? "bg-[#2d1b1e]" : "bg-red-50"}`}
+            disabled={!selectedCourseId}
+            className={`w-7 h-7 items-center justify-center rounded-xl ${
+              !selectedCourseId
+                ? isDark
+                  ? "bg-[#1a1c23]"
+                  : "bg-gray-50"
+                : isDark
+                  ? "bg-[#2d1b1e]"
+                  : "bg-red-50"
+            }`}
           >
-            <Trash2 size={14} color="#ef4444" />
+            <Trash2
+              size={14}
+              color={
+                !selectedCourseId ? (isDark ? "#4b5563" : "#d1d5db") : "#ef4444"
+              }
+            />
           </TouchableOpacity>
 
+          {/* 👈 دکمه افزودن: رنگ و بازخورد وابسته به وضعیت فرم */}
           <TouchableOpacity
-            onPress={() => setSelectedCourseId(null)}
-            className={`w-7 h-7 items-center justify-center rounded-xl ${isDark ? "bg-[#172033]" : "bg-blue-50"}`}
+            onPress={handleAddClick}
+            className={`w-7 h-7 items-center justify-center rounded-xl ${
+              !selectedCourseId
+                ? isDark
+                  ? "bg-[#172033]"
+                  : "bg-blue-50"
+                : isDark
+                  ? "bg-[#1a1c23]"
+                  : "bg-gray-50"
+            }`}
           >
-            <Plus size={14} color="#3b82f6" />
+            <Plus
+              size={14}
+              color={
+                !selectedCourseId ? "#3b82f6" : isDark ? "#6b7280" : "#9ca3af"
+              }
+            />
           </TouchableOpacity>
         </View>
 
         <View className="flex-row items-center gap-2 shrink">
           <View className="justify-center items-end flex-shrink">
             <Text
-              className={`text-[13px] font-extrabold mb-1 ${isDark ? "text-white" : "text-gray-900"}`}
+              className={`text-[13px] font-extrabold mb-1 ${
+                isDark ? "text-white" : "text-gray-900"
+              }`}
               numberOfLines={1}
             >
               ابزار انتخاب واحد
             </Text>
             <View className="flex-row items-center gap-1.5">
               <View
-                className={`flex-row items-center gap-0.5 px-1.5 rounded border ${isDark ? "bg-[#172033] border-[#1e3a8a]" : "bg-blue-50 border-blue-200"}`}
+                className={`flex-row items-center gap-0.5 px-1.5 rounded border ${
+                  isDark
+                    ? "bg-[#172033] border-[#1e3a8a]"
+                    : "bg-blue-50 border-blue-200"
+                }`}
               >
                 <Text className="text-[10px] font-mono font-bold text-blue-500">
                   {totalUnits}
@@ -123,15 +184,23 @@ export default function Topbar({ onExportImage }: Props) {
                 </Text>
               </View>
               <View
-                className={`flex-row items-center gap-0.5 px-1.5 rounded border ${isDark ? "bg-[#1f222a] border-[#1f222a]" : "bg-gray-100 border-gray-200"}`}
+                className={`flex-row items-center gap-0.5 px-1.5 rounded border ${
+                  isDark
+                    ? "bg-[#1f222a] border-[#1f222a]"
+                    : "bg-gray-100 border-gray-200"
+                }`}
               >
                 <Text
-                  className={`text-[10px] font-mono font-bold ${isDark ? "text-white" : "text-gray-900"}`}
+                  className={`text-[10px] font-mono font-bold ${
+                    isDark ? "text-white" : "text-gray-900"
+                  }`}
                 >
                   {courses.length}
                 </Text>
                 <Text
-                  className={`text-[9px] font-bold ${isDark ? "text-gray-400" : "text-gray-500"}`}
+                  className={`text-[9px] font-bold ${
+                    isDark ? "text-gray-400" : "text-gray-500"
+                  }`}
                 >
                   دروس:
                 </Text>
