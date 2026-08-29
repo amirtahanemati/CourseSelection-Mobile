@@ -4,6 +4,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { I18nManager, Text, TextInput } from "react-native";
 import Toast from "react-native-toast-message";
+import { toastConfig } from "../components/ui/ToastConfig";
 
 // غیرفعال کردن RTL نیتیو برای جلوگیری از باگ لمسی اندروید
 I18nManager.allowRTL(false);
@@ -49,7 +50,7 @@ export default function RootLayout() {
       >
         <Stack.Screen name="index" />
       </Stack>
-      <Toast />
+      <Toast config={toastConfig} topOffset={60} />
     </>
   );
 }
