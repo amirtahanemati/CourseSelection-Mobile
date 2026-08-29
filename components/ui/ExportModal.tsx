@@ -1,5 +1,5 @@
 import * as DocumentPicker from "expo-document-picker";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import {
@@ -15,12 +15,14 @@ import {
   Dimensions,
   Modal,
   PanResponder,
+  Platform,
   StyleSheet,
   TouchableOpacity,
   View,
 } from "react-native";
 import Toast from "react-native-toast-message";
 import { useCourseStore } from "../../store/useCourseStore";
+import { buildExportFilename } from "../../utils/helpers";
 import Text from "./CustomText";
 
 const { height } = Dimensions.get("window");
@@ -28,7 +30,7 @@ const { height } = Dimensions.get("window");
 interface Props {
   visible: boolean;
   onClose: () => void;
-  onExportImage?: () => void;
+  onExportImage?: () => Promise<void>;
 }
 
 export default function ExportModal({
@@ -113,224 +115,309 @@ export default function ExportModal({
     if (!isProcessing) onClose();
   };
 
-  const handleExportJSON = async () => {
-    try {
-      setIsProcessing(true);
-      const jsonString = JSON.stringify(courses, null, 2);
-
-      const FS = FileSystem as any;
-      const fileUri = `${FS.cacheDirectory}courses_backup_${Date.now()}.json`;
-
-      await FS.writeAsStringAsync(fileUri, jsonString, {
-        encoding: FS.EncodingType.UTF8,
-      });
-
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(fileUri, {
-          mimeType: "application/json",
-          dialogTitle: "ذخیره فایل بکاپ انتخاب واحد",
-        });
-      }
-      onClose();
-    } catch (error) {
-      Toast.show({ type: "error", text1: "خطا در تهیه نسخه پشتیبان." });
-    } finally {
-      setIsProcessing(false);
-    }
+  const executeWithDelay = (callback: () => Promise<void>) => {
+    setIsProcessing(true);
+    setTimeout(async () => {
+      await callback();
+    }, 150);
   };
 
-  const handleImportJSON = async () => {
-    try {
-      setIsProcessing(true);
-      const result = await DocumentPicker.getDocumentAsync({
-        type: ["application/json", "text/plain", "*/*"],
-        copyToCacheDirectory: true,
-      });
-
-      if (!result.canceled && result.assets.length > 0) {
-        const uri = result.assets[0].uri;
-
+  // 👈 منطق بازنویسی شده: نوشتن مستقیم دیتای متنی در فایل (بدون هیچ تبدیلی)
+  const handleExportJSON = () => {
+    executeWithDelay(async () => {
+      try {
+        const jsonString = JSON.stringify(courses, null, 2);
         const FS = FileSystem as any;
-        const fileContent = await FS.readAsStringAsync(uri, {
+
+        if (Platform.OS === "android") {
+          try {
+            const permissions =
+              await FS.StorageAccessFramework.requestDirectoryPermissionsAsync();
+            if (permissions.granted) {
+              const fileUri = await FS.StorageAccessFramework.createFileAsync(
+                permissions.directoryUri,
+                buildExportFilename("course-backup", "json"),
+                "application/json",
+              );
+
+              // فایل متنی JSON مستقیماً با انکودینگ utf8 ذخیره می‌شود
+              await FS.writeAsStringAsync(fileUri, jsonString, {
+                encoding: FS.EncodingType.UTF8,
+              });
+
+              Toast.show({
+                type: "success",
+                text1: "فایل پشتیبان با موفقیت در دستگاه ذخیره شد.",
+              });
+              onClose();
+              return;
+            } else {
+              return; // لغو توسط کاربر
+            }
+          } catch (safError) {
+            // در صورت بروز خطای سیستمی به Fallback (اشتراک‌گذاری) سوییچ می‌کند
+          }
+        }
+
+        // جایگزین امن برای iOS و خطاهای احتمالی فایل‌منیجر اندروید
+        const tempUri = `${FS.documentDirectory}${buildExportFilename("course-backup", "json")}`;
+        await FS.writeAsStringAsync(tempUri, jsonString, {
           encoding: FS.EncodingType.UTF8,
         });
 
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(tempUri, {
+            mimeType: "application/json",
+            dialogTitle: "ذخیره فایل پشتیبان",
+          });
+        }
+        onClose();
+      } catch (error) {
+        Toast.show({ type: "error", text1: "خطا در تهیه نسخه پشتیبان." });
+      } finally {
+        setIsProcessing(false);
+      }
+    });
+  };
+
+  // 👈 اعتبارسنجی ارتقا یافته و سازگار با فرمت ارسال شده
+  const handleImportJSON = () => {
+    executeWithDelay(async () => {
+      try {
+        const result = await DocumentPicker.getDocumentAsync({
+          type: ["application/json", "text/plain", "*/*"],
+          copyToCacheDirectory: true,
+        });
+
+        if (result.canceled) {
+          setIsProcessing(false);
+          return;
+        }
+
+        // سازگاری با نسخه‌های مختلف Expo (گرفتن uri)
+        const asset = result.assets ? result.assets[0] : (result as any);
+        if (!asset || !asset.uri) throw new Error("Invalid URI");
+
+        const uri = asset.uri;
+        const FS = FileSystem as any;
+
+        let fileContent = "";
+        try {
+          // تلاش اولیه با فایل‌سیستم بومی
+          fileContent = await FS.readAsStringAsync(uri, {
+            encoding: FS.EncodingType.UTF8,
+          });
+        } catch (fsError) {
+          // استفاده از Fetch برای دور زدن محدودیت‌های Content Providers در اندروید
+          const response = await fetch(uri);
+          fileContent = await response.text();
+        }
+
         const parsedData = JSON.parse(fileContent);
-        if (Array.isArray(parsedData)) {
+
+        // اعتبارسنجی دقیق آرایه دروس و سشن‌ها
+        const isValid =
+          Array.isArray(parsedData) &&
+          parsedData.every(
+            (item) => item.id && item.name && Array.isArray(item.sessions),
+          );
+
+        if (isValid) {
           importCourses(parsedData);
           Toast.show({
             type: "success",
-            text1: "اطلاعات با موفقیت بازیابی شد.",
+            text1: "اطلاعات دروس با موفقیت بازیابی شد.",
           });
           onClose();
         } else {
-          Toast.show({ type: "error", text1: "ساختار فایل بکاپ نامعتبر است." });
+          Toast.show({
+            type: "error",
+            text1: "ساختار فایل بکاپ نامعتبر است.",
+          });
         }
+      } catch (error) {
+        Toast.show({ type: "error", text1: "خطا در خواندن یا پردازش فایل." });
+      } finally {
+        setIsProcessing(false);
       }
-    } catch (error) {
-      Toast.show({
-        type: "error",
-        text1: "خطا در خواندن فایل. لطفاً دوباره تلاش کنید.",
-      });
-    } finally {
-      setIsProcessing(false);
-    }
+    });
   };
 
-  const handleExportPDF = async () => {
-    try {
-      setIsProcessing(true);
-      if (courses.length === 0) {
-        Toast.show({
-          type: "error",
-          text1: "هیچ درسی برای خروجی گرفتن وجود ندارد.",
-        });
-        setIsProcessing(false);
-        return;
-      }
-
-      const rows = courses
-        .map((c) => {
-          const sessionsStr = c.sessions
-            .map(
-              (s) =>
-                `<span class="badge badge-primary">${s.day} (${s.start} - ${s.end})</span>`,
-            )
-            .join(" ");
-
-          const examStr = c.exam_date
-            ? `<span class="badge badge-danger">${c.exam_date} ساعت ${c.exam_time}</span>`
-            : `<span class="badge badge-neutral">بدون امتحان</span>`;
-
-          return `
-          <tr>
-            <td>
-              <div style="font-weight: 700; color: #1e293b; margin-bottom: 4px;">${c.name}</div>
-              <div style="font-family: monospace; color: #64748b; font-size: 12px;">کد: ${c.code}</div>
-            </td>
-            <td style="font-weight: 500;">${c.professor || "-"}</td>
-            <td><span class="badge badge-outline">${c.units} واحد</span></td>
-            <td><div style="display: flex; flex-wrap: wrap; gap: 4px;">${sessionsStr}</div></td>
-            <td>${examStr}</td>
-          </tr>
-        `;
-        })
-        .join("");
-
-      const today = new Date().toLocaleDateString("fa-IR");
-
-      const html = `
-        <!DOCTYPE html>
-        <html lang="fa" dir="rtl">
-          <head>
-            <meta charset="UTF-8">
-            <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
-            <style>
-              body { 
-                font-family: 'Vazirmatn', Tahoma, Arial, sans-serif; 
-                background-color: #f1f5f9; 
-                padding: 40px; 
-                color: #334155;
-              }
-              .container {
-                background-color: #ffffff;
-                border-radius: 20px;
-                box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
-                overflow: hidden;
-              }
-              .header {
-                background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
-                padding: 35px 30px;
-                text-align: center;
-                color: white;
-              }
-              .header h1 { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.5px; }
-              .header p { margin: 10px 0 0 0; font-size: 14px; opacity: 0.9; font-weight: 300; }
-              table { width: 100%; border-collapse: collapse; text-align: right; }
-              th, td { padding: 18px 24px; border-bottom: 1px solid #f1f5f9; }
-              th { background-color: #f8fafc; color: #475569; font-size: 14px; font-weight: 700; }
-              tr:last-child td { border-bottom: none; }
-              tr:hover { background-color: #f8fafc; }
-              
-              .badge {
-                display: inline-flex;
-                align-items: center;
-                padding: 4px 10px;
-                border-radius: 8px;
-                font-size: 12px;
-                font-weight: 600;
-                white-space: nowrap;
-              }
-              .badge-primary { background-color: #eff6ff; color: #2563eb; }
-              .badge-danger { background-color: #fef2f2; color: #dc2626; }
-              .badge-neutral { background-color: #f1f5f9; color: #64748b; }
-              .badge-outline { border: 1px solid #cbd5e1; color: #475569; }
-              
-              .footer {
-                background-color: #f8fafc;
-                padding: 20px;
-                text-align: center;
-                font-size: 12px;
-                color: #94a3b8;
-                border-top: 1px solid #e2e8f0;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <div class="header">
-                <h1>برنامه کلاسی و امتحانات</h1>
-                <p>تولید شده توسط ابزار جامع انتخاب واحد</p>
-              </div>
-              <table>
-                <thead>
-                  <tr>
-                    <th>مشخصات درس</th>
-                    <th>نام استاد</th>
-                    <th>تعداد واحد</th>
-                    <th>زمان برگزاری جلسات</th>
-                    <th>تاریخ و ساعت امتحان</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${rows}
-                </tbody>
-              </table>
-              <div class="footer">
-                تهیه شده در تاریخ ${today}
-              </div>
-            </div>
-          </body>
-        </html>
-      `;
-
-      const { uri } = await Print.printToFileAsync({ html, base64: false });
-
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri, {
-          UTI: ".pdf",
-          mimeType: "application/pdf",
-          dialogTitle: "اشتراک‌گذاری برنامه PDF",
-        });
-      }
-      onClose();
-    } catch (error) {
-      Toast.show({ type: "error", text1: "خطا در تولید فایل PDF." });
-    } finally {
-      setIsProcessing(false);
+  const handleExportPDF = () => {
+    if (courses.length === 0) {
+      Toast.show({
+        type: "error",
+        text1: "هیچ درسی برای خروجی گرفتن وجود ندارد.",
+      });
+      return;
     }
+
+    executeWithDelay(async () => {
+      try {
+        const rows = courses
+          .map((c) => {
+            const sessionsStr = c.sessions
+              .map(
+                (s) =>
+                  `<span class="badge badge-blue">${s.day} (${s.start} - ${s.end})</span>`,
+              )
+              .join(" ");
+
+            const examStr = c.exam_date
+              ? `<span class="badge badge-red">${c.exam_date} ساعت ${c.exam_time}</span>`
+              : `<span class="badge badge-gray">بدون امتحان</span>`;
+
+            return `
+            <tr>
+              <td>
+                <div class="course-title">${c.name}</div>
+                <div class="course-code">کد: ${c.code}</div>
+              </td>
+              <td>${c.professor || "-"}</td>
+              <td><span class="badge badge-gray">${c.units} واحد</span></td>
+              <td><div style="display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 4px;">${sessionsStr}</div></td>
+              <td>${examStr}</td>
+            </tr>
+          `;
+          })
+          .join("");
+
+        const today = new Date().toLocaleDateString("fa-IR");
+
+        const html = `
+          <!DOCTYPE html>
+          <html lang="fa" dir="rtl">
+            <head>
+              <meta charset="UTF-8">
+              <style>
+                @page { size: A4 landscape; margin: 10mm; }
+                body {
+                  font-family: Tahoma, Arial, sans-serif;
+                  background-color: #ffffff;
+                  color: #1e293b;
+                  margin: 0;
+                  padding: 20px;
+                  direction: rtl;
+                }
+                .header {
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                  border-bottom: 2px solid #f1f5f9;
+                  padding-bottom: 15px;
+                  margin-bottom: 25px;
+                }
+                .title h1 { margin: 0; font-size: 24px; color: #0f172a; }
+                .title p { margin: 5px 0 0 0; font-size: 13px; color: #64748b; }
+                .date { font-size: 14px; font-weight: bold; color: #3b82f6; background: #eff6ff; padding: 8px 16px; border-radius: 8px; }
+                .table-container {
+                  border: 1px solid #e2e8f0;
+                  border-radius: 12px;
+                  overflow: hidden;
+                }
+                table { width: 100%; border-collapse: collapse; text-align: right; font-size: 13px; }
+                th, td { padding: 16px; border-bottom: 1px solid #e2e8f0; }
+                th { background-color: #f8fafc; color: #475569; font-weight: bold; font-size: 13px; }
+                tr:last-child td { border-bottom: none; }
+                .course-title { font-size: 15px; font-weight: bold; color: #0f172a; margin-bottom: 4px; }
+                .course-code { font-family: monospace; font-size: 12px; color: #64748b; }
+                .badge { display: inline-block; padding: 5px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; margin: 2px; }
+                .badge-blue { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+                .badge-red { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+                .badge-gray { background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; }
+                .footer { text-align: center; margin-top: 25px; font-size: 11px; color: #0f172a; }
+              </style>
+            </head>
+            <body>
+              <div class="header">
+                <div class="title">
+                  <h1>برنامه کلاسی و امتحانات</h1>
+                  <p>ابزار جامع انتخاب واحد</p>
+                </div>
+                <div class="date">${today}</div>
+              </div>
+              <div class="table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th width="25%">مشخصات درس</th>
+                      <th width="20%">نام استاد</th>
+                      <th width="10%">تعداد واحد</th>
+                      <th width="25%">زمان برگزاری جلسات</th>
+                      <th width="20%">تاریخ و ساعت امتحان</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${rows}
+                  </tbody>
+                </table>
+              </div>
+              <div class="footer">تولید شده به صورت خودکار • ${today}</div>
+            </body>
+          </html>
+        `;
+
+        const { uri } = await Print.printToFileAsync({ html, base64: false });
+
+        if (Platform.OS === "android") {
+          try {
+            const FS = FileSystem as any;
+            const permissions =
+              await FS.StorageAccessFramework.requestDirectoryPermissionsAsync();
+            if (permissions.granted) {
+              const pdfUri = await FS.StorageAccessFramework.createFileAsync(
+                permissions.directoryUri,
+                buildExportFilename("weekly-schedule", "pdf"),
+                "application/pdf",
+              );
+              // در PDF چون فایل باینری است از Base64 استفاده می‌کنیم تا کرش نکند
+              const base64Data = await FS.readAsStringAsync(uri, {
+                encoding: FS.EncodingType.Base64,
+              });
+              await FS.writeAsStringAsync(pdfUri, base64Data, {
+                encoding: FS.EncodingType.Base64,
+              });
+              Toast.show({
+                type: "success",
+                text1: "فایل PDF با موفقیت در دستگاه ذخیره شد.",
+              });
+              onClose();
+              return;
+            } else {
+              return;
+            }
+          } catch (safError) {
+            // Fallback
+          }
+        }
+
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(uri, {
+            UTI: ".pdf",
+            mimeType: "application/pdf",
+          });
+        }
+        onClose();
+      } catch (error) {
+        Toast.show({ type: "error", text1: "خطا در تولید فایل PDF." });
+      } finally {
+        setIsProcessing(false);
+      }
+    });
   };
 
   const handleExportPNG = () => {
-    if (onExportImage) {
-      onExportImage();
-      onClose();
-    } else {
-      Toast.show({
-        type: "info",
-        text1: "قابلیت عکس‌برداری در حال فعال‌سازی است.",
-      });
-    }
+    if (!onExportImage) return;
+    executeWithDelay(async () => {
+      try {
+        await onExportImage();
+        onClose();
+      } catch (error) {
+        // باز ماندن مودال در صورت انصراف کاربر
+      } finally {
+        setIsProcessing(false);
+      }
+    });
   };
 
   if (!isVisible && !visible) return null;
@@ -375,7 +462,6 @@ export default function ExportModal({
               className="w-16 h-1.5 rounded-full mb-6 mt-1"
               style={{ backgroundColor: isDark ? "#2a2d35" : "#e5e7eb" }}
             />
-
             <Text
               className={`text-xl font-extrabold ${isDark ? "text-white" : "text-gray-900"}`}
               style={{ writingDirection: "rtl", letterSpacing: 0 }}
@@ -402,7 +488,7 @@ export default function ExportModal({
                 <Text
                   className={`text-xs text-right ${isDark ? "text-gray-500" : "text-gray-500"}`}
                 >
-                  تولید برنامه هفتگی در قالب جدول تمیز و زیبا
+                  ذخیره برنامه هفتگی به صورت فایل PDF
                 </Text>
               </View>
             </TouchableOpacity>
@@ -424,7 +510,7 @@ export default function ExportModal({
                 <Text
                   className={`text-xs text-right ${isDark ? "text-gray-500" : "text-gray-500"}`}
                 >
-                  عکس باکیفیت از گرافیک تایم‌لاین
+                  ذخیره گرافیکی برنامه به صورت عکس
                 </Text>
               </View>
             </TouchableOpacity>
@@ -446,7 +532,7 @@ export default function ExportModal({
                 <Text
                   className={`text-xs text-right ${isDark ? "text-gray-500" : "text-gray-500"}`}
                 >
-                  ذخیره فایل دیتابیس با فرمت JSON
+                  ذخیره اطلاعات دروس با فرمت JSON
                 </Text>
               </View>
             </TouchableOpacity>
@@ -468,7 +554,7 @@ export default function ExportModal({
                 <Text
                   className={`text-xs text-right ${isDark ? "text-gray-500" : "text-gray-500"}`}
                 >
-                  آپلود فایل بکاپ و جایگزینی کلاس‌ها
+                  بارگذاری فایل پشتیبان و بازیابی دروس
                 </Text>
               </View>
             </TouchableOpacity>
@@ -479,12 +565,20 @@ export default function ExportModal({
             onPress={handleClose}
             className={`w-full py-4 rounded-2xl flex-row-reverse items-center justify-center border ${isDark ? "bg-[#1a1c23] border-[#272a35]" : "bg-white border-gray-200"}`}
           >
-            <X size={20} color={isDark ? "#d1d5db" : "#4b5563"} />
-            <Text
-              className={`font-bold ml-2 ${isDark ? "text-gray-300" : "text-gray-700"}`}
-            >
-              انصراف و بستن
-            </Text>
+            {isProcessing ? (
+              <Text className={`font-bold text-blue-500`}>
+                در حال پردازش...
+              </Text>
+            ) : (
+              <>
+                <X size={20} color={isDark ? "#d1d5db" : "#4b5563"} />
+                <Text
+                  className={`font-bold ml-2 ${isDark ? "text-gray-300" : "text-gray-700"}`}
+                >
+                  انصراف و بستن
+                </Text>
+              </>
+            )}
           </TouchableOpacity>
         </Animated.View>
       </View>

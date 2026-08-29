@@ -10,7 +10,12 @@ import ExportModal from "../ui/ExportModal";
 import Logo from "../ui/Logo";
 import ThemeToggle from "../ui/ThemeToggle";
 
-export default function Topbar() {
+interface Props {
+  // 👈 تبدیل پراپ به Promise برای اینکه مودال منتظر پایان تولید عکس بماند
+  onExportImage?: () => Promise<void>;
+}
+
+export default function Topbar({ onExportImage }: Props) {
   const courses = useCourseStore((state) => state.courses) || [];
   const selectedCourseId = useCourseStore((state) => state.selectedCourseId);
   const deleteCourse = useCourseStore((state) => state.deleteCourse);
@@ -147,10 +152,10 @@ export default function Topbar() {
         courseName={selectedCourse?.name || "انتخاب شده"}
       />
 
-      {/* 👇 Fixed prop name from isOpen to visible */}
       <ExportModal
         visible={isExportMenuOpen}
         onClose={() => setIsExportMenuOpen(false)}
+        onExportImage={onExportImage}
       />
     </>
   );
