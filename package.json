@@ -37,6 +37,7 @@
     "expo-updates": "~29.0.20",
     "expo-web-browser": "~15.0.11",
     "lucide-react-native": "^1.35.0",
+    "lz-string": "^1.5.0",
     "nativewind": "^2.0.11",
     "react": "19.1.0",
     "react-dom": "19.1.0",
