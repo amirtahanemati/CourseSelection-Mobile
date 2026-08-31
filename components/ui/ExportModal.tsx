@@ -1,5 +1,5 @@
 import * as DocumentPicker from "expo-document-picker";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import {
@@ -24,6 +24,7 @@ import {
   View,
 } from "react-native";
 import Toast from "react-native-toast-message";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useCourseStore } from "../../store/useCourseStore";
 import Text from "./CustomText";
 
@@ -42,6 +43,7 @@ export default function ExportModal({
 }: Props) {
   const { theme, courses, importCourses } = useCourseStore();
   const isDark = theme === "dark";
+  const insets = useSafeAreaInsets();
 
   const [isVisible, setIsVisible] = useState(false);
   const slideAnim = useRef(new Animated.Value(height)).current;
@@ -464,8 +466,9 @@ export default function ExportModal({
             shadowOpacity: isDark ? 0.6 : 0.15,
             shadowRadius: 20,
             elevation: 30,
+            paddingBottom: Math.max(insets.bottom, 16) + 24,
           }}
-          className={`rounded-t-[32px] p-6 pb-10 w-full border-t ${isDark ? "bg-[#12141c] border-[#1f222a]" : "bg-white border-transparent"}`}
+          className={`rounded-t-[32px] p-6 w-full border-t ${isDark ? "bg-[#12141c] border-[#1f222a]" : "bg-white border-transparent"}`}
         >
           <View
             {...panResponder.panHandlers}

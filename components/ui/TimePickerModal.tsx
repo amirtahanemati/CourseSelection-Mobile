@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useCourseStore } from "../../store/useCourseStore";
 import Text from "./CustomText";
 import WheelPicker from "./WheelPicker";
@@ -34,6 +35,7 @@ export default function TimePickerModal({
   onClose,
 }: Props) {
   const isDark = useCourseStore((state) => state.theme) === "dark";
+  const insets = useSafeAreaInsets();
   const [hour, setHour] = useState("08");
   const [minute, setMinute] = useState("00");
 
@@ -146,8 +148,9 @@ export default function TimePickerModal({
             shadowOpacity: isDark ? 0.6 : 0.15,
             shadowRadius: 20,
             elevation: 30,
+            paddingBottom: Math.max(insets.bottom, 16) + 24,
           }}
-          className={`rounded-t-[32px] p-6 pb-10 w-full border-t ${isDark ? "bg-[#12141c] border-[#1f222a]" : "bg-white border-transparent"}`}
+          className={`rounded-t-[32px] p-6 w-full border-t ${isDark ? "bg-[#12141c] border-[#1f222a]" : "bg-white border-transparent"}`}
         >
           <View
             {...panResponder.panHandlers}

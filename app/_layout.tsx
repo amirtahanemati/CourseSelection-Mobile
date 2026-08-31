@@ -1,9 +1,10 @@
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { I18nManager, Text, TextInput } from "react-native";
 import Toast from "react-native-toast-message";
+import AnimatedSplash from "../components/ui/AnimatedSplash";
 import { toastConfig } from "../components/ui/ToastConfig";
 
 // غیرفعال کردن RTL نیتیو برای جلوگیری از باگ لمسی اندروید
@@ -30,6 +31,9 @@ export default function RootLayout() {
     JetBrainsMono: require("../assets/fonts/JetBrainsMono.ttf"),
   });
 
+  // نمایش اسپلش کاستوم و انیمیشنی بعد از مخفی شدن اسپلش نیتیو ساده
+  const [showCustomSplash, setShowCustomSplash] = useState(true);
+
   useEffect(() => {
     if (loaded || error) {
       SplashScreen.hideAsync();
@@ -51,6 +55,9 @@ export default function RootLayout() {
         <Stack.Screen name="index" />
       </Stack>
       <Toast config={toastConfig} topOffset={60} />
+      {showCustomSplash && (
+        <AnimatedSplash onFinish={() => setShowCustomSplash(false)} />
+      )}
     </>
   );
 }

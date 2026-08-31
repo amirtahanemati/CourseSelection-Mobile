@@ -20,6 +20,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
 import { Course, useCourseStore } from "../../store/useCourseStore";
 import { colorFor } from "../../utils/helpers";
@@ -35,6 +36,7 @@ const { height } = Dimensions.get("window");
 export default function BottomSheet({ course, onClose }: Props) {
   const theme = useCourseStore((state) => state.theme);
   const isDark = theme === "dark";
+  const insets = useSafeAreaInsets();
 
   const selectedCourseId = useCourseStore((state) => state.selectedCourseId);
   const setSelectedCourseId = useCourseStore(
@@ -170,8 +172,9 @@ export default function BottomSheet({ course, onClose }: Props) {
             shadowOpacity: isDark ? 0.6 : 0.15,
             shadowRadius: 20,
             elevation: 30,
+            paddingBottom: Math.max(insets.bottom, 16) + 24,
           }}
-          className={`rounded-t-[32px] pb-10 w-full max-h-[90%] border-t ${isDark ? "bg-[#12141c] border-[#1f222a]" : "bg-white border-transparent"}`}
+          className={`rounded-t-[32px] w-full max-h-[90%] border-t ${isDark ? "bg-[#12141c] border-[#1f222a]" : "bg-white border-transparent"}`}
         >
           <View
             {...panResponder.panHandlers}
