@@ -1,5 +1,5 @@
 import * as Linking from "expo-linking";
-import { Gift, Globe, X } from "lucide-react-native";
+import { X } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
@@ -261,7 +261,7 @@ export default function CreditsModal({ visible, onClose }: Props) {
             </Text>
             {renderIconRow(mobileDevLinks)}
 
-            <TouchableOpacity
+            {/* <TouchableOpacity
               onPress={() => openLink("https://daramet.com/Tahanemati")}
               activeOpacity={0.85}
               className="flex-row-reverse items-center justify-center gap-2 mt-5 w-full py-3 rounded-xl bg-red-500/10 border border-red-500/20"
@@ -270,7 +270,7 @@ export default function CreditsModal({ visible, onClose }: Props) {
               <Text className="text-sm font-extrabold text-red-500">
                 حمایت مالی از این پروژه
               </Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
           </View>
 
           {/* توسعه‌دهنده نسخه وب */}
@@ -297,7 +297,7 @@ export default function CreditsModal({ visible, onClose }: Props) {
             </Text>
             {renderIconRow(webDevLinks)}
 
-            <TouchableOpacity
+            {/* <TouchableOpacity
               onPress={() =>
                 openLink("https://course-selection-rho.vercel.app/")
               }
@@ -316,7 +316,7 @@ export default function CreditsModal({ visible, onClose }: Props) {
               >
                 مشاهده و استفاده از نسخه وب
               </Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
           </View>
 
           <TouchableOpacity

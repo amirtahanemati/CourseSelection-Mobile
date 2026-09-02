@@ -47,7 +47,7 @@ export default function Footer({ isFloating = false, onClose }: FooterProps) {
                 isDark ? "text-white" : "text-gray-900"
               }`}
             >
-              درباره ما و نسخه وب
+              درباره ما و تیم سازنده
             </Text>
             <Text
               className={`text-[10px] text-right mt-1 ${
