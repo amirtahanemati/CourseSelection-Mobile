@@ -140,7 +140,28 @@ export default function ExportModal({
         const compressedData = compressToEncodedURIComponent(
           JSON.stringify(courses),
         );
-        const shareUrl = `https://course-selection-rho.vercel.app/?schedule=${compressedData}`;
+        const directUrl = `https://course-selection-rho.vercel.app/?schedule=${compressedData}`;
+
+        let shareUrl = directUrl;
+
+        try {
+          const res = await fetch(
+            "https://course-selection-rho.vercel.app/api/share",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ courses }),
+            },
+          );
+
+          const data = await res.json();
+
+          if (res.ok && data?.id) {
+            shareUrl = `https://course-selection-rho.vercel.app/?s=${data.id}`;
+          }
+        } catch (linkError) {
+          // ارتباط با سرور لینک کوتاه برقرار نشد؛ از لینک مستقیم استفاده می‌شود.
+        }
 
         await Share.share({
           message: `بیا برنامه‌ی هفتگی من رو ببین! 👇\n\n${shareUrl}`,
