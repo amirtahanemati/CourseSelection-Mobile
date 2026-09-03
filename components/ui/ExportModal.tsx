@@ -23,8 +23,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import Toast from "react-native-toast-message";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Toast from "react-native-toast-message";
 import { useCourseStore } from "../../store/useCourseStore";
 import Text from "./CustomText";
 
@@ -169,7 +169,7 @@ export default function ExportModal({
             if (permissions.granted) {
               const fileUri = await FS.StorageAccessFramework.createFileAsync(
                 permissions.directoryUri,
-                `daneshjob_backup_${Date.now()}.json`,
+                `course_selection_backup_${Date.now()}.json`,
                 "application/json",
               );
 
@@ -189,7 +189,7 @@ export default function ExportModal({
           } catch (safError) {}
         }
 
-        const tempUri = `${FS.documentDirectory}daneshjob_backup_${Date.now()}.json`;
+        const tempUri = `${FS.documentDirectory}course_selection_backup_${Date.now()}.json`;
         await FS.writeAsStringAsync(tempUri, jsonString, {
           encoding: FS.EncodingType.UTF8,
         });

@@ -98,7 +98,7 @@ export default function Home() {
                   const imgUri =
                     await FS.StorageAccessFramework.createFileAsync(
                       permissions.directoryUri,
-                      `daneshjob_timeline_${Date.now()}.png`,
+                      `course_selection_timeline_${Date.now()}.png`,
                       "image/png",
                     );
                   const base64Data = await FS.readAsStringAsync(uri, {
