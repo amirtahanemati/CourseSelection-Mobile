@@ -151,6 +151,16 @@ After running `npx expo start`, you can test the app by scanning the QR code wit
 npm run lint
 ```
 
+## 📥 Download
+
+### Android
+
+Download the latest Android version from Myket:
+
+[![Get it from Myket](https://img.shields.io/badge/Get%20it%20on-Myket-00A86B?style=for-the-badge)](https://myket.ir/app/com.amirtaha.courseselection)
+
+> The Android version is officially available on Myket.
+
 ## 🖥️ Web Version
 
 This project also runs in the browser via React Native Web. You can try the deployed web version here:
