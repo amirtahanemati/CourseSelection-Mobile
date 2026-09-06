@@ -260,17 +260,6 @@ export default function CreditsModal({ visible, onClose }: Props) {
               امیرطاها نعمتی
             </Text>
             {renderIconRow(mobileDevLinks)}
-
-            {/* <TouchableOpacity
-              onPress={() => openLink("https://daramet.com/Tahanemati")}
-              activeOpacity={0.85}
-              className="flex-row-reverse items-center justify-center gap-2 mt-5 w-full py-3 rounded-xl bg-red-500/10 border border-red-500/20"
-            >
-              <Gift size={16} color="#ef4444" />
-              <Text className="text-sm font-extrabold text-red-500">
-                حمایت مالی از این پروژه
-              </Text>
-            </TouchableOpacity> */}
           </View>
 
           {/* توسعه‌دهنده نسخه وب */}
@@ -296,27 +285,6 @@ export default function CreditsModal({ visible, onClose }: Props) {
               رضا محمدنیا
             </Text>
             {renderIconRow(webDevLinks)}
-
-            {/* <TouchableOpacity
-              onPress={() =>
-                openLink("https://course-selection-rho.vercel.app/")
-              }
-              activeOpacity={0.85}
-              className={`flex-row-reverse items-center justify-center gap-2 mt-5 w-full py-3 rounded-xl border ${
-                isDark
-                  ? "bg-[#12141c] border-[#1e3a8a]"
-                  : "bg-blue-50 border-blue-200"
-              }`}
-            >
-              <Globe size={16} color={isDark ? "#60a5fa" : "#3b82f6"} />
-              <Text
-                className={`text-sm font-extrabold ${
-                  isDark ? "text-blue-400" : "text-blue-600"
-                }`}
-              >
-                مشاهده و استفاده از نسخه وب
-              </Text>
-            </TouchableOpacity> */}
           </View>
 
           <TouchableOpacity
