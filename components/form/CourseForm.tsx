@@ -14,6 +14,7 @@ import Toast from "react-native-toast-message";
 import { useCourseStore } from "../../store/useCourseStore";
 import { Session } from "../../types";
 import {
+  examOverlap,
   overlap,
   parseTimeToMinutes,
   toEnglishDigits,
@@ -125,6 +126,28 @@ export default function CourseForm() {
     return null;
   };
 
+  const checkExamConflict = (
+    newExamDate: string | null,
+    newExamTime: string | null,
+    ignoreId: number | null,
+  ) => {
+    if (!newExamDate || !newExamTime) return null;
+    for (const course of courses) {
+      if (course.id === ignoreId) continue;
+      if (
+        examOverlap(
+          newExamDate,
+          newExamTime,
+          course.exam_date,
+          course.exam_time,
+        )
+      ) {
+        return course.name;
+      }
+    }
+    return null;
+  };
+
   const handlePress = () => {
     if (isAnimating) return;
 
@@ -150,6 +173,19 @@ export default function CourseForm() {
         type: "error",
         text1: `تداخل زمانی با درس "${conflict}"!`,
       });
+
+    if (!noExam) {
+      const examConflict = checkExamConflict(
+        examDate,
+        examTime,
+        selectedCourseId,
+      );
+      if (examConflict)
+        return Toast.show({
+          type: "error",
+          text1: `تداخل امتحان با درس "${examConflict}"!`,
+        });
+    }
 
     setIsAnimating(true);
 

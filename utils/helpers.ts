@@ -72,3 +72,14 @@ export function toEnglishDigits(str: string): string {
       String(["٠", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩"].indexOf(w)),
     );
 }
+
+// Check exam date+time conflict (exact match)
+export function examOverlap(
+  dateA: string | null,
+  timeA: string | null,
+  dateB: string | null,
+  timeB: string | null,
+): boolean {
+  if (!dateA || !timeA || !dateB || !timeB) return false;
+  return dateA === dateB && timeA === timeB;
+}
