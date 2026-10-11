@@ -151,8 +151,17 @@ export default function CourseForm() {
   const handlePress = () => {
     if (isAnimating) return;
 
-    if (!name || !code)
+    if (!name.trim() || !code.trim())
       return Toast.show({ type: "error", text1: "نام و کد درس الزامی است." });
+
+    const parsedUnits = parseFloat(toEnglishDigits(units));
+    if (!units || !units.trim() || isNaN(parsedUnits) || parsedUnits <= 0) {
+      return Toast.show({
+        type: "error",
+        text1: "تعداد واحد الزامی است و باید عددی بزرگ‌تر از صفر باشد.",
+      });
+    }
+
     for (let i = 0; i < sessions.length; i++) {
       const s = sessions[i];
       if (!s.start || !s.end)
@@ -211,11 +220,12 @@ export default function CourseForm() {
   };
 
   const executeSave = () => {
+    const parsedUnits = parseFloat(toEnglishDigits(units));
     const courseData = {
-      code,
-      name,
-      professor,
-      units: parseFloat(units) || 0,
+      code: code.trim(),
+      name: name.trim(),
+      professor: professor.trim(),
+      units: parsedUnits,
       exam_date: noExam ? null : examDate,
       exam_time: noExam ? null : examTime,
       sessions,
