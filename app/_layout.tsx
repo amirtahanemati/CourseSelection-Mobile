@@ -103,15 +103,12 @@ export default function RootLayout() {
   const courses = useCourseStore((state) => state.courses);
   const theme = useCourseStore((state) => state.theme);
   const isDark = theme === "dark";
-  const notificationsEnabled = useCourseStore(
-    (state) => state.notificationsEnabled,
-  );
 
   useEffect(() => {
     if (isReady) {
-      syncAllNotifications(courses, notificationsEnabled);
+      syncAllNotifications(courses);
     }
-  }, [isReady, courses, notificationsEnabled]);
+  }, [isReady, courses]);
 
   if (!isReady) {
     return null;

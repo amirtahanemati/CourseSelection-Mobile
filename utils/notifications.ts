@@ -198,24 +198,29 @@ async function scheduleEveningDigests(courses: Course[]) {
   }
 }
 
-export async function syncAllNotifications(
-  courses: Course[],
-  enabled: boolean,
-) {
+export async function syncAllNotifications(courses: Course[]) {
   if (Platform.OS === "web") return;
 
   try {
-    await Notifications.cancelAllScheduledNotificationsAsync();
-    if (!enabled) return;
+    const current = await Notifications.getPermissionsAsync();
+    let isGranted = current.granted;
 
-    const granted = await requestNotificationPermissionAsync();
-    if (!granted) return;
+    if (!isGranted && current.canAskAgain) {
+      const requested = await Notifications.requestPermissionsAsync();
+      isGranted = requested.granted;
+    }
 
-    await setupNotificationChannelsAsync();
-    await scheduleEveningDigests(courses);
+    if (!isGranted) {
+      await Notifications.cancelAllScheduledNotificationsAsync().catch(() => {});
+      return;
+    }
+
+    await Notifications.cancelAllScheduledNotificationsAsync().catch(() => {});
+    await setupNotificationChannelsAsync().catch(() => {});
+    await scheduleEveningDigests(courses).catch(() => {});
     for (const course of courses) {
-      await scheduleClassStartReminders(course);
-      await scheduleExamReminders(course);
+      await scheduleClassStartReminders(course).catch(() => {});
+      await scheduleExamReminders(course).catch(() => {});
     }
   } catch (e) {
     console.warn("[notifications] sync failed:", e);
