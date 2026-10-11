@@ -27,20 +27,21 @@ export const EVENING_DIGEST_HOUR = 21;
 export const EVENING_DIGEST_MINUTE = 30;
 export const EXAM_REMINDER_HOUR = 20;
 
-const CHANNEL_CLASS = "class-reminders";
-const CHANNEL_DIGEST = "daily-digest";
-const CHANNEL_EXAM = "exam-reminders";
+export const CHANNEL_CLASS = "class-reminders";
+export const CHANNEL_DIGEST = "daily-digest";
+export const CHANNEL_EXAM = "exam-reminders";
 
 // Expo: 1=یکشنبه ... 7=شنبه
-const WEEKDAY_NUMBER: Record<string, number> = {
+export const WEEKDAY_NUMBER: Record<string, number> = {
   شنبه: 7,
   یکشنبه: 1,
   دوشنبه: 2,
   سه‌شنبه: 3,
   چهارشنبه: 4,
   پنجشنبه: 5,
+  جمعه: 6,
 };
-const DAY_NAME_BY_WEEKDAY: Record<number, string> = Object.fromEntries(
+export const DAY_NAME_BY_WEEKDAY: Record<number, string> = Object.fromEntries(
   Object.entries(WEEKDAY_NUMBER).map(([name, num]) => [num, name]),
 );
 
@@ -70,12 +71,12 @@ export async function requestNotificationPermissionAsync(): Promise<boolean> {
   return requested.granted;
 }
 
-function minutesToHourMinute(totalMinutes: number) {
+export function minutesToHourMinute(totalMinutes: number) {
   const clamped = Math.max(0, totalMinutes);
   return { hour: Math.floor(clamped / 60) % 24, minute: clamped % 60 };
 }
 
-function examDateTime(course: Course): Date | null {
+export function examDateTime(course: Course): Date | null {
   if (!course.exam_date || !course.exam_time) return null;
   const [jy, jm, jd] = toEnglishDigits(course.exam_date)
     .split("/")
@@ -87,13 +88,13 @@ function examDateTime(course: Course): Date | null {
   return new Date(gy, gm - 1, gd, hh || 0, mm || 0, 0, 0);
 }
 
-function addDays(date: Date, days: number): Date {
+export function addDays(date: Date, days: number): Date {
   const d = new Date(date);
   d.setDate(d.getDate() + days);
   return d;
 }
 
-async function scheduleClassStartReminders(course: Course) {
+export async function scheduleClassStartReminders(course: Course) {
   for (let i = 0; i < course.sessions.length; i++) {
     const session = course.sessions[i];
     const weekday = WEEKDAY_NUMBER[session.day];
@@ -123,7 +124,7 @@ async function scheduleClassStartReminders(course: Course) {
   }
 }
 
-async function scheduleExamReminders(course: Course) {
+export async function scheduleExamReminders(course: Course) {
   const examAt = examDateTime(course);
   if (!examAt) return;
   const now = new Date();
@@ -168,7 +169,7 @@ async function scheduleExamReminders(course: Course) {
   }
 }
 
-async function scheduleEveningDigests(courses: Course[]) {
+export async function scheduleEveningDigests(courses: Course[]) {
   for (let weekday = 1; weekday <= 7; weekday++) {
     const nextWeekday = (weekday % 7) + 1;
     const nextDayName = DAY_NAME_BY_WEEKDAY[nextWeekday];
