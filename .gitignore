@@ -46,3 +46,13 @@ credentials.json
 /local-maven
 gradle.properties
 build-*.bat
+
+# private tests
+tests/
+test/
+*.test.ts
+*.test.tsx
+*.test.js
+*.spec.ts
+*.spec.tsx
+*.spec.js
