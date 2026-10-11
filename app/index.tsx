@@ -25,7 +25,7 @@ export default function Home() {
   const isDark = theme === "dark";
 
   const bgColor = isDark ? "#090a0f" : "#f5f7fa";
-  const timelineRef = useRef<ViewShot>(null);
+  const timelineRef = useRef<any>(null);
   const [isBannerDismissed, setIsBannerDismissed] = useState(false);
   const [isAtBottom, setIsAtBottom] = useState(false);
 
@@ -36,7 +36,11 @@ export default function Home() {
     if (Platform.OS === "android") {
       try {
         SystemUI.setBackgroundColorAsync(bgColor).catch(() => {});
-        NavigationBar.setButtonStyleAsync(isDark ? "light" : "dark").catch(() => {});
+        if ("setStyle" in NavigationBar) {
+          NavigationBar.setStyle(isDark ? "light" : "dark");
+        } else if ("setButtonStyleAsync" in NavigationBar) {
+          (NavigationBar as any).setButtonStyleAsync(isDark ? "light" : "dark").catch(() => {});
+        }
       } catch {}
     }
   }, [isDark, bgColor]);
