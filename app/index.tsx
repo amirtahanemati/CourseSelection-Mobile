@@ -14,8 +14,10 @@ import MobileTimeline from "../components/course/MobileTimeline";
 import CourseForm from "../components/form/CourseForm";
 import Footer from "../components/layout/Footer";
 import Topbar from "../components/layout/Topbar";
+import UpdateModal from "../components/ui/UpdateModal";
 import WelcomeModal from "../components/ui/WelcomeModal";
 import { useCourseStore } from "../store/useCourseStore";
+import { checkForUpdatesAsync } from "../utils/updateChecker";
 
 const screenWidth = Dimensions.get("window").width;
 
@@ -31,6 +33,38 @@ export default function Home() {
 
   const bannerAnim = useRef(new Animated.Value(150)).current;
   const fadeAnim = useRef(new Animated.Value(1)).current;
+
+  const [updateInfo, setUpdateInfo] = useState<{
+    isOpen: boolean;
+    latestVersion: string;
+    currentVersion: string;
+  }>({
+    isOpen: false,
+    latestVersion: "",
+    currentVersion: "",
+  });
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      checkForUpdatesAsync()
+        .then((result) => {
+          if (
+            result.hasUpdate &&
+            !result.isDismissedRecently &&
+            result.latestVersion
+          ) {
+            setUpdateInfo({
+              isOpen: true,
+              latestVersion: result.latestVersion,
+              currentVersion: result.currentVersion,
+            });
+          }
+        })
+        .catch(() => {});
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     if (Platform.OS === "android") {
@@ -158,6 +192,12 @@ export default function Home() {
     <View style={{ flex: 1, backgroundColor: bgColor }}>
       <StatusBar style={isDark ? "light" : "dark"} />
       <WelcomeModal />
+      <UpdateModal
+        visible={updateInfo.isOpen}
+        latestVersion={updateInfo.latestVersion}
+        currentVersion={updateInfo.currentVersion}
+        onClose={() => setUpdateInfo((prev) => ({ ...prev, isOpen: false }))}
+      />
 
       {/* لایه فوتر شناور (نوتیفیکیشن) */}
       {!isBannerDismissed && (

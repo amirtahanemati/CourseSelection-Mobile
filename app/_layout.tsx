@@ -1,8 +1,9 @@
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
+import * as Notifications from "expo-notifications";
 import { useEffect, useState } from "react";
-import { I18nManager, Text, TouchableOpacity, View } from "react-native";
+import { I18nManager, Linking, Text, TouchableOpacity, View } from "react-native";
 import Toast from "react-native-toast-message";
 import AnimatedSplash from "../components/ui/AnimatedSplash";
 import { toastConfig } from "../components/ui/ToastConfig";
@@ -109,6 +110,16 @@ export default function RootLayout() {
       syncAllNotifications(courses);
     }
   }, [isReady, courses]);
+
+  useEffect(() => {
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      const url = response.notification.request.content.data?.url;
+      if (typeof url === "string") {
+        Linking.openURL(url).catch(() => {});
+      }
+    });
+    return () => sub.remove();
+  }, []);
 
   if (!isReady) {
     return null;
