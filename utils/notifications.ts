@@ -1,7 +1,7 @@
 import * as Notifications from "expo-notifications";
 import { toGregorian } from "jalaali-js";
 import { Platform } from "react-native";
-import { Course } from "../types";
+import type { Course } from "../types";
 import {
   normalizeTimeStr,
   parseTimeToMinutes,
