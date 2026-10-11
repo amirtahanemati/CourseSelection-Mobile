@@ -4,6 +4,7 @@ import { Text as RNText, StyleSheet, TextProps } from "react-native";
 export default function CustomText({ style, ...props }: TextProps) {
   // ۱. تبدیل تمام استایل‌های تایلویند به یک آبجکت قابل خواندن
   const flatStyle = StyleSheet.flatten(style || {}) as any;
+  const newStyle = { ...flatStyle };
 
   // ۲. فونت پیش‌فرض (وزن معمولی)
   let customFontFamily = "DanaFaNum-Regular";
@@ -21,14 +22,13 @@ export default function CustomText({ style, ...props }: TextProps) {
       customFontFamily = "DanaFaNum-Bold";
     }
 
-    // ۴. ترفند طلایی: پاک کردن fontWeight تا سیستم‌عامل موبایل فونت را خراب نکند
-    delete flatStyle.fontWeight;
+    delete newStyle.fontWeight;
   }
 
   return (
     <RNText
       {...props}
-      style={[flatStyle, { fontFamily: customFontFamily, textAlign: "right" }]}
+      style={[newStyle, { fontFamily: customFontFamily, textAlign: "right" }]}
     />
   );
 }

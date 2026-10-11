@@ -34,8 +34,10 @@ export default function Home() {
 
   useEffect(() => {
     if (Platform.OS === "android") {
-      SystemUI.setBackgroundColorAsync(bgColor);
-      NavigationBar.setButtonStyleAsync(isDark ? "light" : "dark");
+      try {
+        SystemUI.setBackgroundColorAsync(bgColor).catch(() => {});
+        NavigationBar.setButtonStyleAsync(isDark ? "light" : "dark").catch(() => {});
+      } catch {}
     }
   }, [isDark, bgColor]);
 

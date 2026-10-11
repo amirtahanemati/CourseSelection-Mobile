@@ -2,45 +2,118 @@ import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useState } from "react";
-import { I18nManager, Text, TextInput } from "react-native";
+import { I18nManager, Text, TouchableOpacity, View } from "react-native";
 import Toast from "react-native-toast-message";
 import AnimatedSplash from "../components/ui/AnimatedSplash";
 import { toastConfig } from "../components/ui/ToastConfig";
+import { useCourseStore } from "../store/useCourseStore";
+import { syncAllNotifications } from "../utils/notifications";
 
 // غیرفعال کردن RTL نیتیو برای جلوگیری از باگ لمسی اندروید
-I18nManager.allowRTL(false);
-I18nManager.forceRTL(false);
+try {
+  I18nManager.allowRTL(false);
+  I18nManager.forceRTL(false);
+} catch {}
 
-// اعمال فونت پیش‌فرض به تمام متن‌ها و اینپوت‌ها (ترفند React Native)
-// @ts-ignore
-if (Text.defaultProps == null) Text.defaultProps = {};
-// @ts-ignore
-Text.defaultProps.style = { fontFamily: "DanaFaNum" };
-// @ts-ignore
-if (TextInput.defaultProps == null) TextInput.defaultProps = {};
-// @ts-ignore
-TextInput.defaultProps.style = { fontFamily: "DanaFaNum-Regular" };
+// جلوگیری ایمن از بسته شدن زودهنگام اسپلش اسکرین
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
-SplashScreen.preventAutoHideAsync();
+export function ErrorBoundary({
+  error,
+  retry,
+}: {
+  error: Error;
+  retry: () => void;
+}) {
+  return (
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: "#090a0f",
+        justifyContent: "center",
+        alignItems: "center",
+        padding: 24,
+      }}
+    >
+      <Text
+        style={{
+          color: "#ffffff",
+          fontSize: 18,
+          fontWeight: "bold",
+          marginBottom: 10,
+          textAlign: "center",
+        }}
+      >
+        خطایی در اجرای برنامه رخ داد
+      </Text>
+      <Text
+        style={{
+          color: "#f87171",
+          fontSize: 13,
+          textAlign: "center",
+          marginBottom: 24,
+          lineHeight: 20,
+        }}
+      >
+        {error?.message || "خطای ناشناخته"}
+      </Text>
+      <TouchableOpacity
+        onPress={retry}
+        style={{
+          backgroundColor: "#2563eb",
+          paddingHorizontal: 24,
+          paddingVertical: 12,
+          borderRadius: 12,
+        }}
+      >
+        <Text style={{ color: "#ffffff", fontWeight: "bold" }}>تلاش مجدد</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
+    DanaFaNum: require("../assets/fonts/DanaFaNum-Regular.ttf"),
     "DanaFaNum-Regular": require("../assets/fonts/DanaFaNum-Regular.ttf"),
     "DanaFaNum-Bold": require("../assets/fonts/DanaFaNum-Bold.ttf"),
     "DanaFaNum-ExtraBold": require("../assets/fonts/DanaFaNum-ExtraBold.ttf"),
     JetBrainsMono: require("../assets/fonts/JetBrainsMono.ttf"),
   });
 
-  // نمایش اسپلش کاستوم و انیمیشنی بعد از مخفی شدن اسپلش نیتیو ساده
+  const [fontTimeout, setFontTimeout] = useState(false);
   const [showCustomSplash, setShowCustomSplash] = useState(true);
 
+  // تایمر اطمینان برای فونت‌ها تا در صورت تاخیر یا اشکال فونت‌ها، صفحه سیاه نماند
   useEffect(() => {
-    if (loaded || error) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded, error]);
+    const timer = setTimeout(() => {
+      setFontTimeout(true);
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, []);
 
-  if (!loaded && !error) {
+  const isReady = Boolean(loaded || error || fontTimeout);
+
+  useEffect(() => {
+    if (isReady) {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [isReady]);
+
+  const courses = useCourseStore((state) => state.courses);
+  const theme = useCourseStore((state) => state.theme);
+  const isDark = theme === "dark";
+  const notificationsEnabled = useCourseStore(
+    (state) => state.notificationsEnabled,
+  );
+
+  useEffect(() => {
+    if (isReady) {
+      syncAllNotifications(courses, notificationsEnabled);
+    }
+  }, [isReady, courses, notificationsEnabled]);
+
+  if (!isReady) {
     return null;
   }
 
@@ -49,7 +122,7 @@ export default function RootLayout() {
       <Stack
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: "#090a0f" },
+          contentStyle: { backgroundColor: isDark ? "#090a0f" : "#f5f7fa" },
         }}
       >
         <Stack.Screen name="index" />

@@ -18,57 +18,55 @@ export default function AnimatedSplash({ onFinish }: Props) {
   const bgColor = isDark ? "#090a0f" : "#f5f7fa";
   const glowColor = isDark ? "#1877f2" : "#5b8def";
 
-  const logoScale = useRef(new Animated.Value(0.8)).current;
-  const logoOpacity = useRef(new Animated.Value(0)).current;
-  const glowOpacity = useRef(new Animated.Value(0)).current;
-  const titleOpacity = useRef(new Animated.Value(0)).current;
-  const titleTranslate = useRef(new Animated.Value(8)).current;
+  const logoScale = useRef(new Animated.Value(0.9)).current;
+  const logoOpacity = useRef(new Animated.Value(1)).current;
+  const glowOpacity = useRef(new Animated.Value(0.8)).current;
+  const titleOpacity = useRef(new Animated.Value(1)).current;
+  const titleTranslate = useRef(new Animated.Value(0)).current;
   const overlayOpacity = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    Animated.sequence([
-      Animated.parallel([
-        Animated.timing(glowOpacity, {
-          toValue: 1,
-          duration: 500,
-          easing: Easing.out(Easing.quad),
-          useNativeDriver: true,
-        }),
-        Animated.spring(logoScale, {
-          toValue: 1,
-          damping: 12,
-          stiffness: 140,
-          mass: 0.7,
-          useNativeDriver: true,
-        }),
-        Animated.timing(logoOpacity, {
-          toValue: 1,
-          duration: 420,
-          useNativeDriver: true,
-        }),
-      ]),
-      Animated.parallel([
-        Animated.timing(titleOpacity, {
-          toValue: 1,
-          duration: 380,
-          useNativeDriver: true,
-        }),
-        Animated.timing(titleTranslate, {
+    let called = false;
+    const safeFinish = () => {
+      if (!called) {
+        called = true;
+        onFinish();
+      }
+    };
+
+    // تضمین ۱۰۰٪ عدم قفل شدن صفحه اسپلش حتی در صورت بروز خطا در انیمیشن
+    const timer = setTimeout(safeFinish, 1200);
+
+    try {
+      Animated.sequence([
+        Animated.parallel([
+          Animated.timing(glowOpacity, {
+            toValue: 1,
+            duration: 350,
+            easing: Easing.out(Easing.quad),
+            useNativeDriver: true,
+          }),
+          Animated.spring(logoScale, {
+            toValue: 1,
+            damping: 15,
+            stiffness: 150,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.delay(400),
+        Animated.timing(overlayOpacity, {
           toValue: 0,
-          duration: 380,
-          easing: Easing.out(Easing.quad),
+          duration: 300,
+          easing: Easing.in(Easing.quad),
           useNativeDriver: true,
         }),
-      ]),
-      Animated.delay(420),
-      Animated.timing(overlayOpacity, {
-        toValue: 0,
-        duration: 320,
-        easing: Easing.in(Easing.quad),
-        useNativeDriver: true,
-      }),
-    ]).start(() => onFinish());
-  }, []);
+      ]).start(() => safeFinish());
+    } catch {
+      safeFinish();
+    }
+
+    return () => clearTimeout(timer);
+  }, [onFinish]);
 
   return (
     <Animated.View
