@@ -30,6 +30,7 @@ export const EXAM_REMINDER_HOUR = 20;
 export const CHANNEL_CLASS = "class-reminders";
 export const CHANNEL_DIGEST = "daily-digest";
 export const CHANNEL_EXAM = "exam-reminders";
+export const CHANNEL_UPDATES = "app-updates";
 
 // Expo: 1=یکشنبه ... 7=شنبه
 export const WEEKDAY_NUMBER: Record<string, number> = {
@@ -61,6 +62,36 @@ export async function setupNotificationChannelsAsync() {
     importance: Notifications.AndroidImportance.MAX,
     vibrationPattern: [0, 300, 200, 300],
   });
+  await Notifications.setNotificationChannelAsync(CHANNEL_UPDATES, {
+    name: "بروزرسانی‌های برنامه",
+    importance: Notifications.AndroidImportance.HIGH,
+    vibrationPattern: [0, 250, 250, 250],
+  });
+}
+
+export async function notifyNewAppUpdateAsync(version: string) {
+  if (Platform.OS === "web") return;
+
+  try {
+    const isGranted = await requestNotificationPermissionAsync();
+    if (!isGranted) return;
+
+    await setupNotificationChannelsAsync().catch(() => {});
+    await Notifications.scheduleNotificationAsync({
+      identifier: `app-update:${version}`,
+      content: {
+        title: "🚀 بروزرسانی جدید در مایکت",
+        body: `نسخه ${version} ابزار انتخاب واحد منتشر شد! برای استفاده از امکانات جدید، برنامه را بروزرسانی کنید.`,
+        sound: "default",
+        data: {
+          url: "https://myket.ir/app/com.amirtaha.courseselection",
+        },
+      },
+      trigger: null,
+    });
+  } catch (e) {
+    console.warn("[notifications] failed to notify update:", e);
+  }
 }
 
 export async function requestNotificationPermissionAsync(): Promise<boolean> {
