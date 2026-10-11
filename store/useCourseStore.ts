@@ -8,6 +8,7 @@ interface CourseState {
   courses: Course[];
   selectedCourseId: number | null;
   theme: "dark" | "light";
+  notificationsEnabled: boolean;
 
   addCourse: (course: Course) => void;
   updateCourse: (id: number, updatedCourse: Partial<Course>) => void;
@@ -15,6 +16,7 @@ interface CourseState {
   setSelectedCourseId: (id: number | null) => void;
   toggleTheme: () => void;
   importCourses: (courses: Course[]) => void;
+  toggleNotifications: () => void;
 }
 
 const systemTheme = Appearance.getColorScheme() || "light";
@@ -25,6 +27,10 @@ export const useCourseStore = create<CourseState>()(
       courses: [],
       selectedCourseId: null,
       theme: systemTheme as "dark" | "light",
+      notificationsEnabled: true,
+
+      toggleNotifications: () =>
+        set((state) => ({ notificationsEnabled: !state.notificationsEnabled })),
 
       addCourse: (course) =>
         set((state) => ({ courses: [...state.courses, course] })),

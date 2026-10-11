@@ -1,6 +1,13 @@
 import * as Clipboard from "expo-clipboard";
-import { Copy, Download, Plus, Trash2 } from "lucide-react-native";
-import React, { useState } from "react";
+import {
+  Bell,
+  BellOff,
+  Copy,
+  Download,
+  Plus,
+  Trash2,
+} from "lucide-react-native";
+import { useState } from "react";
 import { TouchableOpacity, View } from "react-native";
 import Toast from "react-native-toast-message";
 import { useCourseStore } from "../../store/useCourseStore";
@@ -80,6 +87,23 @@ export default function Topbar({ onExportImage }: Props) {
     }
   };
 
+  const notificationsEnabled = useCourseStore(
+    (state) => state.notificationsEnabled,
+  );
+  const toggleNotifications = useCourseStore(
+    (state) => state.toggleNotifications,
+  );
+
+  const handleToggleNotifications = () => {
+    toggleNotifications();
+    Toast.show({
+      type: notificationsEnabled ? "info" : "success",
+      text1: notificationsEnabled
+        ? "نوتیفیکیشن‌ها خاموش شد"
+        : "نوتیفیکیشن‌ها روشن شد",
+    });
+  };
+
   return (
     <>
       <View
@@ -89,6 +113,18 @@ export default function Topbar({ onExportImage }: Props) {
       >
         <View className="flex-row items-center gap-1 shrink-0">
           <ThemeToggle />
+          <TouchableOpacity
+            onPress={handleToggleNotifications}
+            className={`w-7 h-7 items-center justify-center rounded-xl ${
+              isDark ? "bg-[#1f222a]" : "bg-gray-100"
+            }`}
+          >
+            {notificationsEnabled ? (
+              <Bell size={14} color={isDark ? "#9ca3af" : "#6b7280"} />
+            ) : (
+              <BellOff size={14} color={isDark ? "#4b5563" : "#d1d5db"} />
+            )}
+          </TouchableOpacity>
 
           <View
             className={`w-[1px] h-4 mx-0.5 ${

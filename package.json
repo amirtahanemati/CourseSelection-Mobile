@@ -7,7 +7,11 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "build:apk": "cd android && gradlew assembleRelease",
+    "build:apk-debug": "cd android && gradlew assembleDebug",
+    "build:bundle": "cd android && gradlew bundleRelease",
+    "clean:android": "cd android && gradlew clean"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
@@ -26,6 +30,7 @@
     "expo-image": "~57.0.5",
     "expo-linking": "~57.0.10",
     "expo-navigation-bar": "~57.0.2",
+    "expo-notifications": "~57.0.18",
     "expo-print": "~57.0.2",
     "expo-router": "~57.0.21",
     "expo-sharing": "~57.0.19",
@@ -35,6 +40,7 @@
     "expo-system-ui": "~57.0.4",
     "expo-updates": "~57.0.22",
     "expo-web-browser": "~57.0.3",
+    "jalaali-js": "^2.0.1",
     "lucide-react-native": "^1.35.0",
     "lz-string": "^1.5.0",
     "nativewind": "^2.0.11",
